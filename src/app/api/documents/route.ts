@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { documentListInput, documentUploadInput } from "@/lib/validation";
+import { documentIntelligenceAvailable } from "@/lib/document-intelligence";
 
 const bucket = "family-documents";
 const allowedTypes = new Set(["application/pdf", "image/jpeg", "image/png", "text/plain"]);
@@ -38,7 +39,13 @@ export async function GET(request: Request) {
   if (input.data.query) query = query.ilike("title", `%${input.data.query.replace(/[%_]/g, "\\$&")}%`);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: "Could not load documents." }, { status: 500 });
-  return NextResponse.json({ documents: data ?? [] });
+  const documents = data ?? [];
+  const { data: intelligence, error: intelligenceError } = documents.length
+    ? await supabase.from("document_intelligence").select("document_id,status,summary,expiry_date,metadata,error_message,processed_at").in("document_id", documents.map((document) => document.id))
+    : { data: [], error: null };
+  if (intelligenceError) return NextResponse.json({ error: "Could not load document intelligence." }, { status: 500 });
+  const byDocumentId = new Map((intelligence ?? []).map((item) => [item.document_id, item]));
+  return NextResponse.json({ documents: documents.map((document) => ({ ...document, intelligence: byDocumentId.get(document.id) ?? null })), intelligence_available: documentIntelligenceAvailable() });
 }
 
 export async function POST(request: Request) {
@@ -71,5 +78,6 @@ export async function POST(request: Request) {
     await supabase.from("documents").delete().eq("id", documentId);
     return NextResponse.json({ error: "The file could not be securely uploaded. Please try again." }, { status: 502 });
   }
-  return NextResponse.json({ document: { id: documentId } }, { status: 201 });
+  const { error: intelligenceError } = await supabase.from("document_intelligence").insert({ document_id: documentId, family_id: input.data.family_id, owner_user_id: userId });
+  return NextResponse.json({ document: { id: documentId }, intelligence_queued: !intelligenceError, intelligence_available: documentIntelligenceAvailable() }, { status: 201 });
 }

@@ -18,6 +18,17 @@ This is the single running record of meaningful application changes, security de
 - Applied `20261113192000_add_document_vault.sql` and the policy-hardening follow-up `20261113193000_harden_document_storage_insert.sql` to the connected Supabase project. Verified the bucket is private, its 10 MB allowlist is present, document RLS is enabled, and all three metadata plus three object policies exist.
 - Verified unauthenticated document access returns HTTP 401, then ran `npm run lint`, `npm run typecheck`, `npm run build`, and `git diff --check` successfully. A real upload/preview/delete and a two-user sharing/isolation pass remain manual acceptance tests because the current automated browser session has no signed-in account.
 
+## 2026-11-13 — Phase 5 Document Intelligence
+
+- Added the RLS-protected `document_intelligence` table, linked one-to-one to its source document with `ON DELETE CASCADE`. Deleting the source metadata now atomically deletes every extracted-text, summary, metadata, expiry, and processing record; the Vault deletion route already removes the corresponding source/preview objects first.
+- Added durable bounded processing state (`queued`, `processing`, `ready`, `failed`), attempt counts, retry times, server model attribution, error state, and indexed queue/expiry lookups. Only the source uploader may create an empty queued job; browser roles cannot alter extracted content, status, or retry state.
+- Uploads now enqueue a job after the source file is successfully written. Added a secret-protected, server-only worker endpoint that claims at most two due jobs per run, detects stale work, caps retries at three, limits AI analysis inputs to 5 MB and outputs to 60,000 extracted characters, and fetches private source files only with a server-side service-role client.
+- Implemented plaintext extraction and model-backed PDF/image extraction/OCR, factual summary generation, issuer/type/date metadata, and expiry-date detection. The worker treats document content as untrusted data and parses a bounded Zod schema before persisting results.
+- Added permission-aware document Q&A. It rechecks both the source document and derived row under RLS, bounds context to 18,000 characters, and answers only from that authorized extracted content. The model has no database credentials and no write path.
+- Updated the Document Vault UI with asynchronous queue/configuration status, per-file analysis state, summaries, expiry alerts, error feedback, and a ready-document Q&A form.
+- Applied `20261113194000_add_document_intelligence.sql` to the connected Supabase project. Verified RLS is enabled; authenticated users have only select/insert permissions, no update permission; `anon` has no select permission; and the table has its three required foreign keys.
+- Verified unauthenticated document Q&A returns HTTP 401 and the unconfigured processor returns HTTP 503 without processing or exposing a file. Ran lint, typecheck, production build, and diff check. Live extraction/OCR, worker retry behavior, expiry detection, and Q&A require server-only `SUPABASE_SERVICE_ROLE_KEY`, `DOCUMENT_INTELLIGENCE_WORKER_SECRET`, and `OPENAI_API_KEY`, which are intentionally absent locally.
+
 ## 2026-11-13 — Phase 0 audit and Phase 1 family collaboration
 
 ### Audit result

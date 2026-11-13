@@ -46,6 +46,7 @@ export const documentListInput = z.object({
   query: z.string().trim().max(100).optional(),
   category: documentCategory.optional(),
 });
+export const documentQuestionInput = z.object({ question: z.string().trim().min(1, "Enter a question about this document.").max(600) });
 
 const assistantFields = z.object({
   title: z.string().trim().max(160).nullable(),

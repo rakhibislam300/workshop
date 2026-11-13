@@ -55,6 +55,7 @@ The migration creates `profiles`, `family_members`, `tasks`, `bills`, and `appoi
 | Contextual family assistant | Implemented; configuration-dependent | Reads only active-family records under RLS, answers/summarizes/conflict-checks, creates Zod-validated proposals through a bounded model tool, and saves only after a separate permission-checked confirmation. |
 | Family collaboration | Implemented | Family workspaces, roles, switching, shared records, secure invitation acceptance, and activity history. |
 | Private document vault | Implemented | Private Supabase Storage, validated PDF/JPG/PNG/text upload, categories, private/family sharing, secure temporary previews/downloads, search, and source-file deletion. |
+| Document intelligence | Implemented; configuration-dependent | Durable private processing queue, text/PDF/image extraction, OCR, summaries, metadata/expiry detection, and permission-aware Q&A are ready; the worker needs server-only credentials. |
 | Real-time syncing, deployment | Deliberately post-MVP | Explicitly outside this localhost-only hackathon build. |
 | Voice assistance | Excluded | This project deliberately contains no microphone, speech recognition, text-to-speech, or voice UI. |
 
@@ -73,6 +74,7 @@ The collaboration migration must be applied after the two original migrations:
 7. [`20261113191000_fix_email_delivery_queue_policy.sql`](supabase/migrations/20261113191000_fix_email_delivery_queue_policy.sql)
 8. [`20261113192000_add_document_vault.sql`](supabase/migrations/20261113192000_add_document_vault.sql)
 9. [`20261113193000_harden_document_storage_insert.sql`](supabase/migrations/20261113193000_harden_document_storage_insert.sql)
+10. [`20261113194000_add_document_intelligence.sql`](supabase/migrations/20261113194000_add_document_intelligence.sql)
 
 An owner or admin creates an invite link in the dashboard, shares it only with the invited email address, and the recipient signs in with that exact address before accepting. Owners can manage collaborator roles and removal; the database protects the final owner. Jibon intentionally does not send email itself yet because no transactional email provider has been configured.
 
@@ -95,6 +97,27 @@ Optional email uses a separate RLS-protected queue and a secret-protected, serve
 The **Private document vault** is now available on the dashboard. It stores document metadata in an RLS-protected `documents` table and objects in the non-public `family-documents` bucket. Uploads go to authenticated server routes and are validated twice: the route accepts only PDF, JPG, PNG, or plain-text files at 10 MB or smaller, while the bucket carries the same size/type allowlist.
 
 Choose **Only me** for an uploader-private record or **Shared with family** for a file every current family member may open. The application creates a five-minute signed URL only after it can select the metadata under RLS, so no cross-family signed URL can be generated. Delete removes source and any future derived preview object before metadata; the private bucket has no general listing policy. The browser uses only the normal authenticated client—no Storage or Supabase service-role secret is shipped to it.
+
+## Phase 5 Document Intelligence
+
+Each successful vault upload also creates a durable, empty `document_intelligence` job. Source metadata owns the derived row through a database cascade: deleting a document deletes extracted text, summaries, metadata, expiry data, and processing state. Browser roles can see derived content only when their existing private/family document visibility permits it, and cannot write or alter processing output.
+
+To activate the asynchronous worker locally or after deployment, set these **server-only** values in `.env.local`:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=...
+OPENAI_API_KEY=...
+DOCUMENT_INTELLIGENCE_WORKER_SECRET=use-a-long-random-secret
+```
+
+Then call the worker from a trusted local terminal or scheduled server process; never from browser code:
+
+```bash
+curl -X POST http://localhost:3000/api/document-intelligence/process \
+  -H "x-document-intelligence-secret: $DOCUMENT_INTELLIGENCE_WORKER_SECRET"
+```
+
+The worker claims at most two jobs per request, retries transient failures up to three times, treats jobs stuck in processing for ten minutes as stale, and accepts at most 5 MB per AI analysis (vault storage remains 10 MB). It performs plain-text extraction and model-backed PDF/image extraction/OCR, creates a bounded summary plus factual type/issuer/date/expiry metadata, and never grants the model database access. **Ask a processed document** uses only the signed-in person's RLS-authorized extraction; it does not search other family documents. No document content is sent to the model until this configured worker is called.
 
 ## Verification performed
 
@@ -119,6 +142,7 @@ All three pass in this workspace. The default Turbopack build was blocked by the
 9. Resize to mobile width and verify the navigation, cards, and forms remain usable.
 10. Schedule a one-time reminder one minute in the future, verify it appears in the in-app center, mark it read/unread, and verify only its recipient can query it. Create a daily reminder and check its `next_run_at` advances after delivery.
 11. Upload a PDF or image as **Only me**, then verify it appears only for its uploader. Upload another as **Shared with family**, accept a second-account family invitation, and verify that member can preview but cannot delete it. Verify an account outside the family gets no metadata or signed link. Delete an owner document and confirm its file no longer opens.
+12. With the Document Intelligence worker configured, upload a small text file, PDF, and image. Invoke the worker, confirm each reaches **Analyzed**, verify a bounded factual summary and any detected expiry date, ask a question answerable only from that document, and verify a second family cannot access either the extraction or Q&A. Delete the source and confirm its derived row is gone.
 
 ## Later: deploy to Vercel
 
