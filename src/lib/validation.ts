@@ -33,6 +33,20 @@ export const notificationPreferenceInput = z.object({
   email_enabled: z.boolean(),
 });
 
+export const documentCategory = z.enum(["identity", "medical", "finance", "home", "education", "other"]);
+export const documentVisibility = z.enum(["private", "family"]);
+export const documentUploadInput = z.object({
+  family_id: z.string().uuid(),
+  title: z.string().trim().min(1, "Enter a document title.").max(160),
+  category: documentCategory,
+  visibility: documentVisibility,
+});
+export const documentListInput = z.object({
+  family_id: z.string().uuid(),
+  query: z.string().trim().max(100).optional(),
+  category: documentCategory.optional(),
+});
+
 const assistantFields = z.object({
   title: z.string().trim().max(160).nullable(),
   description: z.string().trim().max(2000).nullable(),

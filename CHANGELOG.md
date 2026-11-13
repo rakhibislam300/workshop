@@ -8,6 +8,16 @@ This is the single running record of meaningful application changes, security de
 - **Deployment status:** intentionally deferred; no Vercel deployment should be attempted until local Supabase acceptance tests pass.
 - **Current start command:** `npm run dev` after creating `.env.local` from `.env.example` and applying the Supabase migration.
 
+## 2026-11-13 — Phase 4 private Document Vault
+
+- Added `documents` metadata with UUIDs, family and uploader foreign keys, categories, private/family visibility, controlled MIME types, size checks, storage paths, timestamps, indexes, RLS, and activity-history triggers.
+- Added the private `family-documents` Storage bucket. It accepts only PDF, JPG, PNG, and plain-text objects up to 10 MB; it is not public and has no bucket-wide listing policy.
+- Added aligned RLS policies across document metadata and `storage.objects`: owners can read/delete private files; all current family members can read only family-shared files; uploads must match an existing uploader-owned document record at the exact generated family/document path. This prevents cross-family reads, unsigned access, and untracked bucket uploads.
+- Added authenticated Route Handlers for permission-aware document listing/search, validated multipart upload, five-minute signed preview/download URL creation, and storage-first deletion. The browser never receives a Storage service-role credential.
+- Added the responsive **Private document vault** dashboard panel with category/search filters, private/family sharing choice, accessible file upload, short-lived previews, secure opening, owner-only deletion, empty/loading/error states, and source/preview cleanup paths reserved for Phase 5 derived content.
+- Applied `20261113192000_add_document_vault.sql` and the policy-hardening follow-up `20261113193000_harden_document_storage_insert.sql` to the connected Supabase project. Verified the bucket is private, its 10 MB allowlist is present, document RLS is enabled, and all three metadata plus three object policies exist.
+- Verified unauthenticated document access returns HTTP 401, then ran `npm run lint`, `npm run typecheck`, `npm run build`, and `git diff --check` successfully. A real upload/preview/delete and a two-user sharing/isolation pass remain manual acceptance tests because the current automated browser session has no signed-in account.
+
 ## 2026-11-13 — Phase 0 audit and Phase 1 family collaboration
 
 ### Audit result

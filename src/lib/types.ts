@@ -7,5 +7,8 @@ export type Appointment = { id: string; title: string; appointment_at: string; l
 export type FamilyRole = "owner" | "admin" | "member";
 export type Family = { id: string; name: string; role: FamilyRole };
 export type Activity = { id: string; action: string; entity_type: string; created_at: string };
+export type DocumentCategory = "identity" | "medical" | "finance" | "home" | "education" | "other";
+export type DocumentVisibility = "private" | "family";
+export type VaultDocument = { id: string; title: string; category: DocumentCategory; visibility: DocumentVisibility; original_filename: string; mime_type: string; size_bytes: number; created_at: string; owner_user_id: string };
 
 export type WorkspaceData = { profile: { display_name: string } | null; members: FamilyMember[]; tasks: Task[]; bills: Bill[]; appointments: Appointment[]; activities: Activity[]; families: Family[]; activeFamily: Family; userId: string; email: string };

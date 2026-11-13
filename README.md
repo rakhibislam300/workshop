@@ -54,7 +54,8 @@ The migration creates `profiles`, `family_members`, `tasks`, `bills`, and `appoi
 | AI Smart Add | Implemented; configuration-dependent | Protected server route, validation, clarification, preview, and user confirmation are ready; it needs a valid `OPENAI_API_KEY` to make live model calls. |
 | Contextual family assistant | Implemented; configuration-dependent | Reads only active-family records under RLS, answers/summarizes/conflict-checks, creates Zod-validated proposals through a bounded model tool, and saves only after a separate permission-checked confirmation. |
 | Family collaboration | Implemented | Family workspaces, roles, switching, shared records, secure invitation acceptance, and activity history. |
-| Real-time syncing, storage, deployment | Deliberately post-MVP | Explicitly outside this localhost-only hackathon build. |
+| Private document vault | Implemented | Private Supabase Storage, validated PDF/JPG/PNG/text upload, categories, private/family sharing, secure temporary previews/downloads, search, and source-file deletion. |
+| Real-time syncing, deployment | Deliberately post-MVP | Explicitly outside this localhost-only hackathon build. |
 | Voice assistance | Excluded | This project deliberately contains no microphone, speech recognition, text-to-speech, or voice UI. |
 
 ## Phase 1 collaboration upgrade
@@ -68,6 +69,10 @@ The collaboration migration must be applied after the two original migrations:
 3. [`20261113160000_add_collaboration_management.sql`](supabase/migrations/20261113160000_add_collaboration_management.sql)
 4. [`20261113170000_add_family_ai_audit.sql`](supabase/migrations/20261113170000_add_family_ai_audit.sql)
 5. [`20261113180000_add_persistent_reminders.sql`](supabase/migrations/20261113180000_add_persistent_reminders.sql)
+6. [`20261113190000_add_optional_email_reminders.sql`](supabase/migrations/20261113190000_add_optional_email_reminders.sql)
+7. [`20261113191000_fix_email_delivery_queue_policy.sql`](supabase/migrations/20261113191000_fix_email_delivery_queue_policy.sql)
+8. [`20261113192000_add_document_vault.sql`](supabase/migrations/20261113192000_add_document_vault.sql)
+9. [`20261113193000_harden_document_storage_insert.sql`](supabase/migrations/20261113193000_harden_document_storage_insert.sql)
 
 An owner or admin creates an invite link in the dashboard, shares it only with the invited email address, and the recipient signs in with that exact address before accepting. Owners can manage collaborator roles and removal; the database protects the final owner. Jibon intentionally does not send email itself yet because no transactional email provider has been configured.
 
@@ -84,6 +89,12 @@ The **Persistent reminders** center schedules a task, bill, or appointment for t
 Supabase `pg_cron` runs a private database worker every minute. It creates a durable in-app notification with an idempotency key of `(schedule_id, occurrence_at)`. If a transaction fails, the due schedule is left eligible and the next worker run retries it. Preferences, schedules, and notifications have separate family-scoped RLS policies; notifications are personal even when their source record is shared.
 
 Optional email uses a separate RLS-protected queue and a secret-protected, server-only Resend worker. It retries a failed send up to five times with exponential backoff and uses the notification ID as the provider idempotency key. It is intentionally inactive here: `RESEND_API_KEY`, `REMINDER_FROM_EMAIL`, `REMINDER_WORKER_SECRET`, and `SUPABASE_SERVICE_ROLE_KEY` are absent. Before enabling this on a future deployed scheduler, set those server-only values and invoke `POST /api/reminders/deliver-email` with the `x-reminder-worker-secret` header. Do not expose any of them to the browser. There are still no push or SMS notifications.
+
+## Phase 4 private Document Vault
+
+The **Private document vault** is now available on the dashboard. It stores document metadata in an RLS-protected `documents` table and objects in the non-public `family-documents` bucket. Uploads go to authenticated server routes and are validated twice: the route accepts only PDF, JPG, PNG, or plain-text files at 10 MB or smaller, while the bucket carries the same size/type allowlist.
+
+Choose **Only me** for an uploader-private record or **Shared with family** for a file every current family member may open. The application creates a five-minute signed URL only after it can select the metadata under RLS, so no cross-family signed URL can be generated. Delete removes source and any future derived preview object before metadata; the private bucket has no general listing policy. The browser uses only the normal authenticated client—no Storage or Supabase service-role secret is shipped to it.
 
 ## Verification performed
 
@@ -107,6 +118,7 @@ All three pass in this workspace. The default Turbopack build was blocked by the
 8. With `OPENAI_API_KEY` configured, ask the Context-aware assistant for an overdue summary and a schedule-conflict check. Ask it to create and update a record; verify no data changes until **Confirm & save**, then verify it cannot update a record in another family.
 9. Resize to mobile width and verify the navigation, cards, and forms remain usable.
 10. Schedule a one-time reminder one minute in the future, verify it appears in the in-app center, mark it read/unread, and verify only its recipient can query it. Create a daily reminder and check its `next_run_at` advances after delivery.
+11. Upload a PDF or image as **Only me**, then verify it appears only for its uploader. Upload another as **Shared with family**, accept a second-account family invitation, and verify that member can preview but cannot delete it. Verify an account outside the family gets no metadata or signed link. Delete an owner document and confirm its file no longer opens.
 
 ## Later: deploy to Vercel
 
