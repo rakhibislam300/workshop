@@ -19,6 +19,13 @@ This is the single running record of meaningful application changes, security de
 - Re-ran `npm run lint`, `npm run typecheck`, `npm run build`, and `git diff --check`; all passed. No deployment was attempted.
 - Still requiring a human acceptance pass: email verification/login with a real account, two-account RLS isolation, authenticated CRUD across every center, mobile screen-reader/browser checks, configured AI/document/email worker flows, backup/restore drill, and production monitoring/deployment configuration.
 
+### Phase 9 follow-up — reproducible installs and dependency review
+
+- Regenerated `package-lock.json` after `npm ci --dry-run` detected missing platform-specific optional Sharp packages. The lockfile now records the complete dependency graph, including the optional binaries needed for clean installs on supported operating systems.
+- Verified `npm ci --ignore-scripts --dry-run` now succeeds. `npm audit --omit=dev --audit-level=high` reports zero production dependency vulnerabilities.
+- A full audit still reports seven moderate **development-only** findings inherited through `eslint-config-next` → `typescript-eslint` → `minimatch`. Npm has no non-breaking automated fix for the currently pinned Next.js lint stack, so no forced or framework-breaking upgrade was applied. Reassess when updating Next.js/eslint-config-next.
+- Rechecked localhost route availability: login and registration return HTTP 200; unauthenticated calendar export continues to return HTTP 401. No application feature behavior or deployment configuration changed in this follow-up.
+
 ## 2026-11-13 — Phase 4 private Document Vault
 
 - Added `documents` metadata with UUIDs, family and uploader foreign keys, categories, private/family visibility, controlled MIME types, size checks, storage paths, timestamps, indexes, RLS, and activity-history triggers.

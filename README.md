@@ -150,9 +150,11 @@ Calendar controls can be saved in English, Assamese, Hindi, or Bengali through t
 npm run lint
 npm run typecheck
 npm run build
+npm ci --ignore-scripts --dry-run
+npm audit --omit=dev --audit-level=high
 ```
 
-All three pass in this workspace. The default Turbopack build was blocked by the execution sandbox when it attempted to bind a worker port, so the project build script uses Next's webpack compiler instead; this still produces the production build shown above.
+All verification commands pass in this workspace. The default Turbopack build was blocked by the execution sandbox when it attempted to bind a worker port, so the project build script uses Next's webpack compiler instead; this still produces the production build shown above. The production dependency audit reports zero vulnerabilities. Full lint-tooling audit notices are documented in the change log and require a future compatible Next.js lint-stack update.
 
 ## Hardening status
 
