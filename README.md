@@ -81,7 +81,9 @@ Every proposed change is validated again with Zod, previewed in the browser, the
 
 The **Persistent reminders** center schedules a task, bill, or appointment for the signed-in person in the active family. A saved IANA time zone and an explicit `TIMESTAMPTZ` run time avoid browser-clock assumptions. Schedules may run once, daily, weekly, or monthly; recurring next runs are calculated in local wall time so daylight-saving transitions remain meaningful.
 
-Supabase `pg_cron` runs a private database worker every minute. It creates a durable in-app notification with an idempotency key of `(schedule_id, occurrence_at)`. If a transaction fails, the due schedule is left eligible and the next worker run retries it. Preferences, schedules, and notifications have separate family-scoped RLS policies; notifications are personal even when their source record is shared. Email preference data is reserved but delivery is disabled—no email provider has been configured and the app does not claim to send email, push, or SMS.
+Supabase `pg_cron` runs a private database worker every minute. It creates a durable in-app notification with an idempotency key of `(schedule_id, occurrence_at)`. If a transaction fails, the due schedule is left eligible and the next worker run retries it. Preferences, schedules, and notifications have separate family-scoped RLS policies; notifications are personal even when their source record is shared.
+
+Optional email uses a separate RLS-protected queue and a secret-protected, server-only Resend worker. It retries a failed send up to five times with exponential backoff and uses the notification ID as the provider idempotency key. It is intentionally inactive here: `RESEND_API_KEY`, `REMINDER_FROM_EMAIL`, `REMINDER_WORKER_SECRET`, and `SUPABASE_SERVICE_ROLE_KEY` are absent. Before enabling this on a future deployed scheduler, set those server-only values and invoke `POST /api/reminders/deliver-email` with the `x-reminder-worker-secret` header. Do not expose any of them to the browser. There are still no push or SMS notifications.
 
 ## Verification performed
 

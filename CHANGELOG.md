@@ -64,6 +64,15 @@ This is the single running record of meaningful application changes, security de
 - Executed the private worker successfully with no due records, and verified both `anon` and `authenticated` lack execute permission on it. The Supabase security advisor introduced no new reminder-worker finding.
 - Verified `npm run lint`, `npm run typecheck`, `npm run build`, and `git diff --check`. A fresh localhost browser session reached the protected login gate; end-to-end schedule creation remains an authenticated manual test because that fresh session has no account password.
 
+## 2026-11-13 — Phase 3 optional email completion
+
+- Added `reminder_email_deliveries`, a private browser-inaccessible delivery queue keyed one-to-one to the in-app notification. It records attempts, next retry, provider ID, delivery time, and the last non-sensitive error.
+- Updated the private cron materializer to enqueue an email only when the recipient has opted in. It reads the Auth email inside the private database function; no Auth email or queue row is exposed through the browser API.
+- Added the protected server-only `POST /api/reminders/deliver-email` worker. It requires a separate worker secret, processes at most 20 due deliveries, uses Resend's `Idempotency-Key`, and retries failed provider requests with exponential backoff up to five attempts.
+- Added server-only placeholder variables to `.env.example`: `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `REMINDER_FROM_EMAIL`, and `REMINDER_WORKER_SECRET`. The current `.env.local` has none of these, so email preferences remain disabled in the UI and the worker returns HTTP 503 without sending any message.
+- Applied migrations `20261113190000_add_optional_email_reminders.sql` and `20261113191000_fix_email_delivery_queue_policy.sql`. Verified the queue has RLS, no `anon` or authenticated browser select grant, an explicit deny policy, and no new Supabase security-advisor warning.
+- Verified lint, typecheck, production build, diff check, and the missing-email-config worker guard. Live provider delivery and a scheduler callback remain intentionally untested until the required provider credentials and a deployed scheduler exist.
+
 ## 2026-11-13 — Usability and dashboard completion pass
 
 - Refined the teal-first visual system with consistent cards, accessible focus treatment, clearer fields, responsive controls, and a sticky session-aware dashboard header.

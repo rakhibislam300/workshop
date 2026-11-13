@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { notificationPreferenceInput, reminderScheduleInput } from "@/lib/validation";
+import { emailReminderAvailable } from "@/lib/reminder-email";
 
 const familyQuery = z.string().uuid();
 
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
   ]);
   const error = [schedules.error, notifications.error, preferences.error].find(Boolean);
   if (error) return NextResponse.json({ error: "Could not load your persistent reminders." }, { status: 500 });
-  return NextResponse.json({ schedules: schedules.data ?? [], notifications: notifications.data ?? [], preferences: preferences.data ?? { timezone: "Asia/Kolkata", in_app_enabled: true, email_enabled: false } });
+  return NextResponse.json({ schedules: schedules.data ?? [], notifications: notifications.data ?? [], preferences: preferences.data ?? { timezone: "Asia/Kolkata", in_app_enabled: true, email_enabled: false }, email_available: emailReminderAvailable() });
 }
 
 export async function POST(request: Request) {
@@ -64,7 +65,8 @@ export async function PATCH(request: Request) {
   const { supabase, userId } = await authenticatedClient();
   if (!userId) return NextResponse.json({ error: "Sign in to update reminder preferences." }, { status: 401 });
   if (!await verifyFamilyAccess(supabase, input.data.family_id, userId)) return NextResponse.json({ error: "You do not have access to this family workspace." }, { status: 403 });
-  const { error } = await supabase.from("notification_preferences").upsert({ ...input.data, user_id: userId, email_enabled: false });
+  if (input.data.email_enabled && !emailReminderAvailable()) return NextResponse.json({ error: "Email reminders are not configured on this server." }, { status: 409 });
+  const { error } = await supabase.from("notification_preferences").upsert({ ...input.data, user_id: userId });
   if (error) return NextResponse.json({ error: "Could not save notification preferences. Check the selected time zone and try again." }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
