@@ -57,6 +57,7 @@ The migration creates `profiles`, `family_members`, `tasks`, `bills`, and `appoi
 | Private document vault | Implemented | Private Supabase Storage, validated PDF/JPG/PNG/text upload, categories, private/family sharing, secure temporary previews/downloads, search, and source-file deletion. |
 | Document intelligence | Implemented; configuration-dependent | Durable private processing queue, text/PDF/image extraction, OCR, summaries, metadata/expiry detection, and permission-aware Q&A are ready; the worker needs server-only credentials. |
 | Financial intelligence | Implemented; AI summary configuration-dependent | Exact INR income/expense records, categories, budgets, recurring bills, subscriptions, analytics, CSV export, and an authorized server-only AI summary route. |
+| Shopping and inventory | Implemented; suggestions configuration-dependent | Shared lists/items, quantities, units, low-stock flags, purchase status, and confirmation-only AI shopping suggestions grounded in family records. |
 | Real-time syncing, deployment | Deliberately post-MVP | Explicitly outside this localhost-only hackathon build. |
 | Voice assistance | Excluded | This project deliberately contains no microphone, speech recognition, text-to-speech, or voice UI. |
 
@@ -77,6 +78,7 @@ The collaboration migration must be applied after the two original migrations:
 9. [`20261113193000_harden_document_storage_insert.sql`](supabase/migrations/20261113193000_harden_document_storage_insert.sql)
 10. [`20261113194000_add_document_intelligence.sql`](supabase/migrations/20261113194000_add_document_intelligence.sql)
 11. [`20261113195000_add_financial_intelligence.sql`](supabase/migrations/20261113195000_add_financial_intelligence.sql)
+12. [`20261113196000_add_shopping_inventory.sql`](supabase/migrations/20261113196000_add_shopping_inventory.sql)
 
 An owner or admin creates an invite link in the dashboard, shares it only with the invited email address, and the recipient signs in with that exact address before accepting. Owners can manage collaborator roles and removal; the database protects the final owner. Jibon intentionally does not send email itself yet because no transactional email provider has been configured.
 
@@ -127,6 +129,12 @@ The dashboard’s **Financial intelligence** center tracks shared family income 
 
 CSV export is protected by the same signed-in family-membership check as the rest of the workspace and returns no more than 1,000 selected-month transactions. The AI summary route similarly verifies membership, loads only the active family’s selected-month transactions and budgets under RLS, has no mutation endpoint, and needs the existing server-only `OPENAI_API_KEY`. Without it, manual financial tracking and CSV export keep working.
 
+## Phase 7 Shopping and Inventory
+
+The **Shared shopping & inventory** center keeps multiple household lists with decimal quantities, units, purchase state, notes, and low-stock flags. Lists are shared only with active family members under RLS. Archive hides a list without deleting its items; delete removes the list and its dependent items through the database foreign key.
+
+The optional suggestions route reads only up to 100 active-family shopping records after authenticating the requester. It can recommend explicitly low-stock or previously recorded household items, but returns a preview only. Nothing is added until the signed-in person selects **Add** beside a suggestion. It needs the existing server-only `OPENAI_API_KEY`; manual list management never depends on it.
+
 ## Verification performed
 
 ```bash
@@ -152,6 +160,7 @@ All three pass in this workspace. The default Turbopack build was blocked by the
 11. Upload a PDF or image as **Only me**, then verify it appears only for its uploader. Upload another as **Shared with family**, accept a second-account family invitation, and verify that member can preview but cannot delete it. Verify an account outside the family gets no metadata or signed link. Delete an owner document and confirm its file no longer opens.
 12. With the Document Intelligence worker configured, upload a small text file, PDF, and image. Invoke the worker, confirm each reaches **Analyzed**, verify a bounded factual summary and any detected expiry date, ask a question answerable only from that document, and verify a second family cannot access either the extraction or Q&A. Delete the source and confirm its derived row is gone.
 13. Create two expense categories and transactions with decimal paise amounts, then confirm the month totals and category budget remaining/overage exactly match the entered values. Add a recurring bill and subscription, pause/resume each, export the selected month CSV, and verify a second account outside the family cannot see or export any financial data. With `OPENAI_API_KEY`, request a monthly summary and verify it reports only the selected family/month and makes no database change.
+14. Create a shared list, add items with different quantities/units, mark one low stock and one purchased, then confirm all current family members see the same state. Archive and restore the list, verify another family cannot access it, and—with `OPENAI_API_KEY`—request a suggestion and confirm no item exists until **Add** is selected.
 
 ## Later: deploy to Vercel
 

@@ -38,6 +38,14 @@ This is the single running record of meaningful application changes, security de
 - Added authenticated `GET /api/finance/export` for a bounded month CSV and protected `POST /api/finance/summary`. The summary route verifies current family membership, reads only that family/month’s RLS-authorized rows, has no write path, and clearly reports unavailable until `OPENAI_API_KEY` is configured.
 - Verified unauthenticated finance export and summary requests return HTTP 401; ran `npm run lint`, `npm run typecheck`, `npm run build`, and `git diff --check`. Authenticated CRUD, cross-family isolation, CSV content, and model-backed summary remain manual acceptance tests because no signed-in test account is available to this automation session.
 
+## 2026-11-13 — Phase 7 Shopping and Inventory
+
+- Added shared `shopping_lists` and `shopping_items` with family-scoped composite foreign keys, exact decimal quantities, units, purchase status, low-stock flags, notes, archival, indexes, immutable creator/workspace triggers, activity history, and cascade cleanup when a list is deleted.
+- Applied `20261113196000_add_shopping_inventory.sql` to the connected Supabase project. Verified RLS is enabled with four family-scoped policies on both tables; anonymous access remains revoked.
+- Added the responsive **Shared shopping & inventory** dashboard center with list create/archive/restore/delete, item add/delete, exact quantity/unit entry, purchase toggle, low-stock marking, pending/purchased groupings, and helpful empty/loading/error states.
+- Added protected `POST /api/shopping/suggestions`. It verifies Auth and active-family membership, reads only up to 100 RLS-authorized household shopping records, requires a strict Zod array response, and never writes a row. Each suggestion appears as a preview and is saved only after the user presses **Add**.
+- Verified lint, typecheck, production build, diff check, and live table/policy state. Authenticated shopping flows, two-family isolation, and live model suggestions remain manual acceptance tests because this automation session lacks a signed-in account and `OPENAI_API_KEY` is not configured.
+
 ## 2026-11-13 — Phase 0 audit and Phase 1 family collaboration
 
 ### Audit result

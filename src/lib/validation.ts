@@ -54,6 +54,10 @@ export const financialTransactionInput = z.object({ title: z.string().trim().min
 export const monthlyBudgetInput = z.object({ category_id: z.string().uuid(), month_start: date, amount: moneyAmount });
 export const recurringFinanceInput = z.object({ title: z.string().trim().min(1, "Enter a title.").max(160), category_id: z.string().uuid().nullable(), amount: moneyAmount, frequency: z.enum(["monthly", "yearly"]), next_date: date });
 export const financeMonthInput = z.object({ family_id: z.string().uuid(), month: z.string().regex(/^\d{4}-\d{2}$/, "Choose a valid month.") });
+export const shoppingListInput = z.object({ title: z.string().trim().min(1, "Enter a list name.").max(120) });
+export const shoppingItemInput = z.object({ title: z.string().trim().min(1, "Enter an item name.").max(160), quantity: z.string().trim().regex(/^\d{1,8}(?:\.\d{1,2})?$/, "Enter a quantity with up to two decimal places.").refine((value) => Number(value) > 0, "Quantity must be greater than zero."), unit: z.string().trim().min(1, "Enter a unit.").max(24), is_low_stock: z.boolean(), notes: z.string().trim().max(500).nullable() });
+export const shoppingSuggestionInput = z.object({ family_id: z.string().uuid(), list_id: z.string().uuid().nullable() });
+export const shoppingSuggestions = z.array(z.object({ title: z.string().trim().min(1).max(160), quantity: z.string().trim().regex(/^\d{1,8}(?:\.\d{1,2})?$/), unit: z.string().trim().min(1).max(24), reason: z.string().trim().min(1).max(200) })).max(8);
 
 const assistantFields = z.object({
   title: z.string().trim().max(160).nullable(),
