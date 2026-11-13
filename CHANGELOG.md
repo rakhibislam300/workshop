@@ -29,6 +29,15 @@ This is the single running record of meaningful application changes, security de
 - Applied `20261113194000_add_document_intelligence.sql` to the connected Supabase project. Verified RLS is enabled; authenticated users have only select/insert permissions, no update permission; `anon` has no select permission; and the table has its three required foreign keys.
 - Verified unauthenticated document Q&A returns HTTP 401 and the unconfigured processor returns HTTP 503 without processing or exposing a file. Ran lint, typecheck, production build, and diff check. Live extraction/OCR, worker retry behavior, expiry detection, and Q&A require server-only `SUPABASE_SERVICE_ROLE_KEY`, `DOCUMENT_INTELLIGENCE_WORKER_SECRET`, and `OPENAI_API_KEY`, which are intentionally absent locally.
 
+## 2026-11-13 — Phase 6 Financial Intelligence
+
+- Added exact INR financial categories, income/expense transactions, monthly category budgets, recurring bills, and subscriptions. Every monetary amount uses `NUMERIC(12,2)` in PostgreSQL; the browser converts decimal strings to paise with `BigInt` for exact totals and budget comparisons rather than accumulating floating-point values.
+- Added category/family composite foreign keys so a transaction, budget, recurring bill, or subscription cannot reference a category from another household. Added creator/workspace immutability triggers, family activity history, data constraints, cascade-safe family references, and query indexes for monthly records, budgets, due dates, renewal dates, and foreign keys.
+- Applied `20261113195000_add_financial_intelligence.sql` to the connected Supabase project. All five finance tables have RLS enabled with family-scoped select/insert/update/delete policies; verified no anonymous access and no new security-advisor warning.
+- Added the responsive **Financial intelligence** dashboard center: month-scoped income/expense entry and deletion, category management, exact monthly totals, category budget tracking, recurring-bill/subscription add/pause/resume/delete flows, and CSV export.
+- Added authenticated `GET /api/finance/export` for a bounded month CSV and protected `POST /api/finance/summary`. The summary route verifies current family membership, reads only that family/month’s RLS-authorized rows, has no write path, and clearly reports unavailable until `OPENAI_API_KEY` is configured.
+- Verified unauthenticated finance export and summary requests return HTTP 401; ran `npm run lint`, `npm run typecheck`, `npm run build`, and `git diff --check`. Authenticated CRUD, cross-family isolation, CSV content, and model-backed summary remain manual acceptance tests because no signed-in test account is available to this automation session.
+
 ## 2026-11-13 — Phase 0 audit and Phase 1 family collaboration
 
 ### Audit result

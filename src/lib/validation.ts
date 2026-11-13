@@ -48,6 +48,13 @@ export const documentListInput = z.object({
 });
 export const documentQuestionInput = z.object({ question: z.string().trim().min(1, "Enter a question about this document.").max(600) });
 
+const moneyAmount = z.string().trim().regex(/^\d{1,10}(?:\.\d{1,2})?$/, "Enter an amount with up to two decimal places.").refine((value) => Number(value) > 0, "Amount must be greater than zero.");
+export const financialCategoryInput = z.object({ name: z.string().trim().min(1, "Enter a category name.").max(80), kind: z.enum(["income", "expense", "both"]) });
+export const financialTransactionInput = z.object({ title: z.string().trim().min(1, "Enter a transaction title.").max(160), type: z.enum(["income", "expense"]), amount: moneyAmount, category_id: z.string().uuid().nullable(), occurred_on: date, notes: z.string().trim().max(1000).nullable() });
+export const monthlyBudgetInput = z.object({ category_id: z.string().uuid(), month_start: date, amount: moneyAmount });
+export const recurringFinanceInput = z.object({ title: z.string().trim().min(1, "Enter a title.").max(160), category_id: z.string().uuid().nullable(), amount: moneyAmount, frequency: z.enum(["monthly", "yearly"]), next_date: date });
+export const financeMonthInput = z.object({ family_id: z.string().uuid(), month: z.string().regex(/^\d{4}-\d{2}$/, "Choose a valid month.") });
+
 const assistantFields = z.object({
   title: z.string().trim().max(160).nullable(),
   description: z.string().trim().max(2000).nullable(),

@@ -56,6 +56,7 @@ The migration creates `profiles`, `family_members`, `tasks`, `bills`, and `appoi
 | Family collaboration | Implemented | Family workspaces, roles, switching, shared records, secure invitation acceptance, and activity history. |
 | Private document vault | Implemented | Private Supabase Storage, validated PDF/JPG/PNG/text upload, categories, private/family sharing, secure temporary previews/downloads, search, and source-file deletion. |
 | Document intelligence | Implemented; configuration-dependent | Durable private processing queue, text/PDF/image extraction, OCR, summaries, metadata/expiry detection, and permission-aware Q&A are ready; the worker needs server-only credentials. |
+| Financial intelligence | Implemented; AI summary configuration-dependent | Exact INR income/expense records, categories, budgets, recurring bills, subscriptions, analytics, CSV export, and an authorized server-only AI summary route. |
 | Real-time syncing, deployment | Deliberately post-MVP | Explicitly outside this localhost-only hackathon build. |
 | Voice assistance | Excluded | This project deliberately contains no microphone, speech recognition, text-to-speech, or voice UI. |
 
@@ -75,6 +76,7 @@ The collaboration migration must be applied after the two original migrations:
 8. [`20261113192000_add_document_vault.sql`](supabase/migrations/20261113192000_add_document_vault.sql)
 9. [`20261113193000_harden_document_storage_insert.sql`](supabase/migrations/20261113193000_harden_document_storage_insert.sql)
 10. [`20261113194000_add_document_intelligence.sql`](supabase/migrations/20261113194000_add_document_intelligence.sql)
+11. [`20261113195000_add_financial_intelligence.sql`](supabase/migrations/20261113195000_add_financial_intelligence.sql)
 
 An owner or admin creates an invite link in the dashboard, shares it only with the invited email address, and the recipient signs in with that exact address before accepting. Owners can manage collaborator roles and removal; the database protects the final owner. Jibon intentionally does not send email itself yet because no transactional email provider has been configured.
 
@@ -119,6 +121,12 @@ curl -X POST http://localhost:3000/api/document-intelligence/process \
 
 The worker claims at most two jobs per request, retries transient failures up to three times, treats jobs stuck in processing for ten minutes as stale, and accepts at most 5 MB per AI analysis (vault storage remains 10 MB). It performs plain-text extraction and model-backed PDF/image extraction/OCR, creates a bounded summary plus factual type/issuer/date/expiry metadata, and never grants the model database access. **Ask a processed document** uses only the signed-in person's RLS-authorized extraction; it does not search other family documents. No document content is sent to the model until this configured worker is called.
 
+## Phase 6 Financial Intelligence
+
+The dashboard’s **Financial intelligence** center tracks shared family income and expenses by month, with optional local categories, exact INR amounts, monthly category budgets, recurring bills, and subscriptions. PostgreSQL stores money as `NUMERIC(12,2)` and the client converts returned decimal strings into paise before aggregating, avoiding floating-point total drift.
+
+CSV export is protected by the same signed-in family-membership check as the rest of the workspace and returns no more than 1,000 selected-month transactions. The AI summary route similarly verifies membership, loads only the active family’s selected-month transactions and budgets under RLS, has no mutation endpoint, and needs the existing server-only `OPENAI_API_KEY`. Without it, manual financial tracking and CSV export keep working.
+
 ## Verification performed
 
 ```bash
@@ -143,6 +151,7 @@ All three pass in this workspace. The default Turbopack build was blocked by the
 10. Schedule a one-time reminder one minute in the future, verify it appears in the in-app center, mark it read/unread, and verify only its recipient can query it. Create a daily reminder and check its `next_run_at` advances after delivery.
 11. Upload a PDF or image as **Only me**, then verify it appears only for its uploader. Upload another as **Shared with family**, accept a second-account family invitation, and verify that member can preview but cannot delete it. Verify an account outside the family gets no metadata or signed link. Delete an owner document and confirm its file no longer opens.
 12. With the Document Intelligence worker configured, upload a small text file, PDF, and image. Invoke the worker, confirm each reaches **Analyzed**, verify a bounded factual summary and any detected expiry date, ask a question answerable only from that document, and verify a second family cannot access either the extraction or Q&A. Delete the source and confirm its derived row is gone.
+13. Create two expense categories and transactions with decimal paise amounts, then confirm the month totals and category budget remaining/overage exactly match the entered values. Add a recurring bill and subscription, pause/resume each, export the selected month CSV, and verify a second account outside the family cannot see or export any financial data. With `OPENAI_API_KEY`, request a monthly summary and verify it reports only the selected family/month and makes no database change.
 
 ## Later: deploy to Vercel
 
