@@ -8,6 +8,17 @@ This is the single running record of meaningful application changes, security de
 - **Deployment status:** intentionally deferred; no Vercel deployment should be attempted until local Supabase acceptance tests pass.
 - **Current start command:** `npm run dev` after creating `.env.local` from `.env.example` and applying the Supabase migration.
 
+## 2026-11-13 — Phase 9 hardening and local release audit
+
+- Added and applied `20261113198000_add_missing_foreign_key_indexes.sql`. It supplies fourteen missing single/composite foreign-key indexes across family, invitation, reminder, finance, and shopping tables. The Supabase performance advisor now reports **zero unindexed foreign keys**.
+- Re-audited the live database: all 23 public application tables have RLS enabled and at least one policy; the core family-scoped CRUD tables have four policies each. Representative sensitive tables have no anonymous grants.
+- Rechecked the five intentional authenticated-only `SECURITY DEFINER` RPC authority boundaries. Each is not callable by `anon`, is callable only by `authenticated`, and remains covered by its fixed search path and in-function authorization checks. The Supabase advisor continues to report these five by design; they should be reviewed whenever a function body changes.
+- The remaining Supabase security setting is **Leaked Password Protection Disabled**. Enable it in the Supabase Auth password-security settings before public release. This is a hosted-project configuration action, not an application code defect.
+- Left the advisor's 49 unused-index informational notices in place. The project has very little live traffic; these indexes support documented query paths, foreign keys, and scheduled workers. Reassess with production query statistics rather than dropping them now.
+- Verified local route boundaries against the production build: an unauthenticated calendar export returns HTTP 401, and an unauthenticated dashboard response contains the server redirect to `/auth/login`. Started the verified local production server with `npm run start` at `http://localhost:3000`.
+- Re-ran `npm run lint`, `npm run typecheck`, `npm run build`, and `git diff --check`; all passed. No deployment was attempted.
+- Still requiring a human acceptance pass: email verification/login with a real account, two-account RLS isolation, authenticated CRUD across every center, mobile screen-reader/browser checks, configured AI/document/email worker flows, backup/restore drill, and production monitoring/deployment configuration.
+
 ## 2026-11-13 — Phase 4 private Document Vault
 
 - Added `documents` metadata with UUIDs, family and uploader foreign keys, categories, private/family visibility, controlled MIME types, size checks, storage paths, timestamps, indexes, RLS, and activity-history triggers.

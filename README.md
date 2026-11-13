@@ -81,6 +81,7 @@ The collaboration migration must be applied after the two original migrations:
 11. [`20261113195000_add_financial_intelligence.sql`](supabase/migrations/20261113195000_add_financial_intelligence.sql)
 12. [`20261113196000_add_shopping_inventory.sql`](supabase/migrations/20261113196000_add_shopping_inventory.sql)
 13. [`20261113197000_add_profile_locale.sql`](supabase/migrations/20261113197000_add_profile_locale.sql)
+14. [`20261113198000_add_missing_foreign_key_indexes.sql`](supabase/migrations/20261113198000_add_missing_foreign_key_indexes.sql)
 
 An owner or admin creates an invite link in the dashboard, shares it only with the invited email address, and the recipient signs in with that exact address before accepting. Owners can manage collaborator roles and removal; the database protects the final owner. Jibon intentionally does not send email itself yet because no transactional email provider has been configured.
 
@@ -152,6 +153,13 @@ npm run build
 ```
 
 All three pass in this workspace. The default Turbopack build was blocked by the execution sandbox when it attempted to bind a worker port, so the project build script uses Next's webpack compiler instead; this still produces the production build shown above.
+
+## Hardening status
+
+- The live project has 23 application tables with RLS enabled; the Phase 9 database audit found no unindexed foreign keys after the final migration.
+- Protected calendar export was verified to return HTTP 401 without a session, and a signed-out dashboard request directs the browser to `/auth/login`.
+- Five authenticated-only `SECURITY DEFINER` RPCs intentionally remain as narrow family-management and AI-rate-limit authority boundaries. Anonymous execution is revoked; review them whenever their SQL changes.
+- Before a public release, enable Supabase **Leaked Password Protection**, perform the two-account tests below, exercise backup/restore, and configure production logs/monitoring. The current unused-index advisor notes are expected while the database has very little traffic; do not remove the indexes without production usage data.
 
 ## Acceptance test checklist (requires Supabase credentials)
 
