@@ -39,7 +39,7 @@ The migration creates `profiles`, `family_members`, `tasks`, `bills`, and `appoi
 - Every public table revokes client grants first, then grants only signed-in CRUD access.
 - Every RLS policy checks `auth.uid()` against the row owner for select, insert, update, and delete.
 - Composite foreign keys ensure a task or appointment cannot reference a local family profile owned by another account.
-- The only security-definer function is an internal auth-signup trigger used to create a matching profile. It is kept in a private schema and revoked from `PUBLIC`.
+- Internal trigger and reminder-worker functions live in the private `app_private` schema and are revoked from `PUBLIC`. The small, authenticated Phase 1/2 public RPCs are documented privileged authority boundaries with explicit permission checks and no anonymous access.
 
 ## MVP feature status
 
@@ -50,7 +50,7 @@ The migration creates `profiles`, `family_members`, `tasks`, `bills`, and `appoi
 | Bills | Implemented | INR amounts, paid status, outstanding balance, overdue treatment, and CRUD. |
 | Appointments | Implemented | CRUD, optional location/member, upcoming-first chronology, and collapsible past history. |
 | Household profiles | Implemented | Local, non-login family profiles can be added, edited, removed, and assigned to work. |
-| Dashboard and reminders | Implemented | Live Supabase metrics plus derived due-today, overdue, and next-72-hour in-app reminders. |
+| Dashboard and reminders | Implemented | Live Supabase metrics plus derived due-today/overdue alerts and persistent, scheduled in-app reminders. |
 | AI Smart Add | Implemented; configuration-dependent | Protected server route, validation, clarification, preview, and user confirmation are ready; it needs a valid `OPENAI_API_KEY` to make live model calls. |
 | Contextual family assistant | Implemented; configuration-dependent | Reads only active-family records under RLS, answers/summarizes/conflict-checks, creates Zod-validated proposals through a bounded model tool, and saves only after a separate permission-checked confirmation. |
 | Family collaboration | Implemented | Family workspaces, roles, switching, shared records, secure invitation acceptance, and activity history. |
@@ -66,6 +66,8 @@ The collaboration migration must be applied after the two original migrations:
 1. [`20261113150000_add_family_collaboration.sql`](supabase/migrations/20261113150000_add_family_collaboration.sql)
 2. [`20261113153000_fix_phase1_rls.sql`](supabase/migrations/20261113153000_fix_phase1_rls.sql)
 3. [`20261113160000_add_collaboration_management.sql`](supabase/migrations/20261113160000_add_collaboration_management.sql)
+4. [`20261113170000_add_family_ai_audit.sql`](supabase/migrations/20261113170000_add_family_ai_audit.sql)
+5. [`20261113180000_add_persistent_reminders.sql`](supabase/migrations/20261113180000_add_persistent_reminders.sql)
 
 An owner or admin creates an invite link in the dashboard, shares it only with the invited email address, and the recipient signs in with that exact address before accepting. Owners can manage collaborator roles and removal; the database protects the final owner. Jibon intentionally does not send email itself yet because no transactional email provider has been configured.
 
@@ -74,6 +76,12 @@ An owner or admin creates an invite link in the dashboard, shares it only with t
 The **Context-aware assistant** sends a request only to the protected Next.js route. It first verifies the authenticated person's membership in the selected family, then reads only that family's RLS-authorized tasks, bills, appointments, and local profiles. The model sees a bounded snapshot (40 records per type) and can answer questions, summarize responsibilities, flag appointments less than an hour apart, or produce one typed create/update proposal. It has no database credentials and cannot write a record directly.
 
 Every proposed change is validated again with Zod, previewed in the browser, then sent to a separate confirmation route that rechecks current family membership and applies a family-scoped insert/update. Existing activity triggers record the actual saved change. [`20261113170000_add_family_ai_audit.sql`](supabase/migrations/20261113170000_add_family_ai_audit.sql) adds an RLS-protected metadata-only request audit and a per-person limit of 12 requests per rolling five minutes. Neither prompts nor household context are stored in that audit table.
+
+## Phase 3 persistent reminders
+
+The **Persistent reminders** center schedules a task, bill, or appointment for the signed-in person in the active family. A saved IANA time zone and an explicit `TIMESTAMPTZ` run time avoid browser-clock assumptions. Schedules may run once, daily, weekly, or monthly; recurring next runs are calculated in local wall time so daylight-saving transitions remain meaningful.
+
+Supabase `pg_cron` runs a private database worker every minute. It creates a durable in-app notification with an idempotency key of `(schedule_id, occurrence_at)`. If a transaction fails, the due schedule is left eligible and the next worker run retries it. Preferences, schedules, and notifications have separate family-scoped RLS policies; notifications are personal even when their source record is shared. Email preference data is reserved but delivery is disabled—no email provider has been configured and the app does not claim to send email, push, or SMS.
 
 ## Verification performed
 
@@ -96,6 +104,7 @@ All three pass in this workspace. The default Turbopack build was blocked by the
 7. With `OPENAI_API_KEY` configured, ask Smart Add to make a task, bill, and appointment. Confirm a proposal is shown, ambiguous inputs ask for clarification, and no record is saved until **Confirm & save** is pressed.
 8. With `OPENAI_API_KEY` configured, ask the Context-aware assistant for an overdue summary and a schedule-conflict check. Ask it to create and update a record; verify no data changes until **Confirm & save**, then verify it cannot update a record in another family.
 9. Resize to mobile width and verify the navigation, cards, and forms remain usable.
+10. Schedule a one-time reminder one minute in the future, verify it appears in the in-app center, mark it read/unread, and verify only its recipient can query it. Create a daily reminder and check its `next_run_at` advances after delivery.
 
 ## Later: deploy to Vercel
 

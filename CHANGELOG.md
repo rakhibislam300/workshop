@@ -53,6 +53,17 @@ This is the single running record of meaningful application changes, security de
 - Verified the signed-in localhost UI renders the assistant and, with no `OPENAI_API_KEY`, shows the expected clear unavailable state while leaving manual tools intact. Verified the unauthenticated route guard returns HTTP 401.
 - Re-ran `npm run lint`, `npm run typecheck`, `npm run build`, and `git diff --check`; all passed.
 
+## 2026-11-13 — Phase 3 persistent in-app reminders
+
+- Added `notification_preferences`, `reminder_schedules`, and `in_app_notifications`, all with RLS. Each schedule and notification is personal to its authenticated recipient while still requiring current family membership.
+- Added per-schedule IANA time zones, one-time/daily/weekly/monthly recurrence, durable next/last run timestamps, delivery-attempt/error fields, and indexes for due-work and recipient notification reads.
+- Enabled Supabase `pg_cron` and installed the private `jibon-ai-materialize-reminders` worker on a one-minute cadence. The worker uses row locks and a unique `(schedule_id, occurrence_at)` key to make delivery idempotent. Failed transactions keep a schedule due so the following run retries it; recurring next occurrences are computed in their local time zone.
+- Added authenticated Next.js route handlers for loading reminders, creating schedules only against a record the caller can access in the active family, updating personal preferences, pausing/resuming/deleting personal schedules, and marking only the recipient's notification read or unread.
+- Added the responsive **Persistent reminders** dashboard center with notification count/read state, create/pause/resume/delete flows, recurrence, and a clear note that email delivery is not configured.
+- Applied `20261113180000_add_persistent_reminders.sql` to the connected Supabase project. Verified all three new tables have RLS, their four expected policies exist, and the `pg_cron` job is active.
+- Executed the private worker successfully with no due records, and verified both `anon` and `authenticated` lack execute permission on it. The Supabase security advisor introduced no new reminder-worker finding.
+- Verified `npm run lint`, `npm run typecheck`, `npm run build`, and `git diff --check`. A fresh localhost browser session reached the protected login gate; end-to-end schedule creation remains an authenticated manual test because that fresh session has no account password.
+
 ## 2026-11-13 — Usability and dashboard completion pass
 
 - Refined the teal-first visual system with consistent cards, accessible focus treatment, clearer fields, responsive controls, and a sticky session-aware dashboard header.
