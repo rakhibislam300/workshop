@@ -46,6 +46,14 @@ This is the single running record of meaningful application changes, security de
 - Added protected `POST /api/shopping/suggestions`. It verifies Auth and active-family membership, reads only up to 100 RLS-authorized household shopping records, requires a strict Zod array response, and never writes a row. Each suggestion appears as a preview and is saved only after the user presses **Add**.
 - Verified lint, typecheck, production build, diff check, and live table/policy state. Authenticated shopping flows, two-family isolation, and live model suggestions remain manual acceptance tests because this automation session lacks a signed-in account and `OPENAI_API_KEY` is not configured.
 
+## 2026-11-13 — Phase 8 Unified Calendar and multilingual text
+
+- Added a responsive unified calendar over existing family tasks, bill due dates, and appointments with day/week/month views, type filtering, chronological appointment conflict detection, and colour-distinct event types.
+- Added protected ICS export for the active family's appointments. The route verifies Auth and current family membership before returning at most 500 calendar events; unauthenticated and cross-family callers receive no data.
+- Added a persistent profile-level language preference constrained to English (`en`), Assamese (`as`), Hindi (`hi`), and Bengali (`bn`) through `20261113197000_add_profile_locale.sql`. The calendar control persists the language under existing owner-only profile RLS.
+- Added localized calendar controls and labels for all four languages without adding voice, microphone, speech, or text-to-speech features.
+- Verified lint, typecheck, production build, and diff check. Authenticated ICS export, visible calendar event correctness, language persistence, and two-account export isolation remain manual checks for a signed-in session.
+
 ## 2026-11-13 — Phase 0 audit and Phase 1 family collaboration
 
 ### Audit result

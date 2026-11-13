@@ -12,4 +12,4 @@ export type DocumentVisibility = "private" | "family";
 export type DocumentIntelligence = { status: "queued" | "processing" | "ready" | "failed"; summary: string | null; expiry_date: string | null; metadata: Record<string, unknown>; error_message: string | null; processed_at: string | null };
 export type VaultDocument = { id: string; title: string; category: DocumentCategory; visibility: DocumentVisibility; original_filename: string; mime_type: string; size_bytes: number; created_at: string; owner_user_id: string; intelligence?: DocumentIntelligence | null };
 
-export type WorkspaceData = { profile: { display_name: string } | null; members: FamilyMember[]; tasks: Task[]; bills: Bill[]; appointments: Appointment[]; activities: Activity[]; families: Family[]; activeFamily: Family; userId: string; email: string };
+export type WorkspaceData = { profile: { display_name: string; locale?: "en" | "as" | "hi" | "bn" } | null; members: FamilyMember[]; tasks: Task[]; bills: Bill[]; appointments: Appointment[]; activities: Activity[]; families: Family[]; activeFamily: Family; userId: string; email: string };

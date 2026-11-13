@@ -11,7 +11,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const userId = claimsData?.claims?.sub;
   if (claimsError || !userId) redirect("/auth/login");
   const [profile, membershipRows] = await Promise.all([
-    supabase.from("profiles").select("display_name").maybeSingle(),
+    supabase.from("profiles").select("display_name,locale").maybeSingle(),
     supabase.from("family_memberships").select("family_id,role,families(id,name)").eq("user_id", userId),
   ]);
   const membershipError = membershipRows.error;
