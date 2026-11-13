@@ -1,0 +1,3 @@
+export default function DashboardLoading() {
+  return <main className="min-h-screen bg-slate-50"><div className="mx-auto max-w-7xl px-4 py-6 sm:px-6"><div className="h-14 animate-pulse rounded-xl bg-white"/><div className="mt-6 h-7 w-48 animate-pulse rounded bg-slate-200"/><div className="mt-2 h-5 w-72 animate-pulse rounded bg-slate-100"/><div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-36 animate-pulse rounded-xl bg-white"/>)}</div><div className="mt-6 h-56 animate-pulse rounded-xl bg-white"/></div></main>;
+}
