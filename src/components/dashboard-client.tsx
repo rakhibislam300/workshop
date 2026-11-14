@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BellRing, CalendarDays, Check, CheckCircle2, Clock3, Inbox, Pencil, Plus, ReceiptIndianRupee, Search, Sparkles, Trash2, UserRound, Users } from "lucide-react";
+import { BellRing, CalendarDays, Check, CheckCircle2, Clock3, Eye, Inbox, Pencil, Plus, ReceiptIndianRupee, Search, Sparkles, Trash2, UserRound, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { appointmentInput, billInput, familyMemberInput, profileInput, taskInput } from "@/lib/validation";
 import type { Appointment, Bill, Task, WorkspaceData } from "@/lib/types";
@@ -18,6 +18,7 @@ import { DocumentVault } from "@/components/document-vault";
 import { FinanceCenter } from "@/components/finance-center";
 import { ShoppingCenter } from "@/components/shopping-center";
 import { CalendarCenter } from "@/components/calendar-center";
+import { SharedTrees } from "@/components/shared-trees";
 
 const sections = [
   { id: "overview", label: "Overview", icon: CheckCircle2 },
@@ -33,13 +34,14 @@ const sections = [
   { id: "profile", label: "Family & profile", icon: Users },
   { id: "invitations", label: "Invitations", icon: Inbox },
   { id: "tree", label: "Family tree", icon: Users },
+  { id: "shared-trees", label: "Shared trees", icon: Eye },
 ] as const;
 type Tab = typeof sections[number]["id"];
 const navigationGroups: { label: string; items: Tab[] }[] = [
   { label: "Today", items: ["overview", "tasks", "appointments", "calendar", "reminders"] },
   { label: "Home", items: ["shopping", "documents"] },
   { label: "Money", items: ["bills", "finance"] },
-  { label: "Family", items: ["profile", "invitations", "tree"] },
+  { label: "Family", items: ["profile", "invitations", "tree", "shared-trees"] },
   { label: "Assist", items: ["assistant"] },
 ];
 type SmartProposal = { kind: "task" | "bill" | "appointment"; proposal: Record<string, unknown> };
@@ -94,6 +96,7 @@ export function DashboardClient({ data }: { data: WorkspaceData }) {
       {tab === "profile" && <><div className="mx-auto mb-5 max-w-2xl rounded-xl border border-teal-200 bg-teal-50 p-5"><h2 className="font-bold">Your family, across generations</h2><p className="my-2 text-sm text-slate-600">Build your family tree with photos and connect with relatives in other households.</p><button className="button" onClick={() => setTab("tree")}>Open family tree & invitations</button></div><Profile data={data} onSubmit={saveProfile} busy={busy} /><div className="mx-auto mt-5 max-w-2xl"><PersonalTreeProfiles /></div></>}
       {tab === "invitations" && <div className="mx-auto max-w-2xl"><FamilyInvitationInbox /></div>}
       {tab === "tree" && <FamilyTree key={data.activeFamily.id} familyId={data.activeFamily.id} familyName={data.activeFamily.name} role={data.activeFamily.role} userId={data.userId} displayName={data.profile?.display_name || ""} members={data.members}/>}
+      {tab === "shared-trees" && <SharedTrees userId={data.userId} displayName={data.profile?.display_name || data.email}/>}
       {editMember && <Modal title="Edit household profile" onClose={() => setEditMember(null)}><FamilyMemberForm value={editMember} onSubmit={saveMember} busy={busy}/></Modal>}
       {headerModal === "family" && <Modal title="Create a family workspace" onClose={() => setHeaderModal(null)}><FamilyWorkspaceForm onSubmit={createFamily} busy={busy}/></Modal>}
       {headerModal === "invite" && <Modal title="Invite a collaborator" onClose={() => setHeaderModal(null)}><CollaboratorInviteForm onSubmit={inviteCollaborator} busy={busy} invitationLink={latestInvitationLink}/></Modal>}

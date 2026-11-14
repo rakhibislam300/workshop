@@ -2,6 +2,12 @@
 
 This is the single running record of meaningful application changes, security decisions, verification, and known setup gaps.
 
+## 2026-11-14 — Tree-only sharing
+
+- Added a separate, invitation-based **tree-only sharing** channel. Owners/admins invite a Jibon ID to view one family tree; the recipient explicitly accepts it from **Shared trees**.
+- Accepted tree viewers receive no family membership and cannot access the owner&apos;s tasks, bills, appointments, local household profiles, documents, finances, shopping, reminders, or family dashboard. They can only read the shared tree and authorized tree portraits.
+- Added `20261114150350_tree_only_sharing.sql`, family-tree/photo RLS extensions, protected share routes, invitation/revocation controls, and a read-only shared-tree workspace. Revocation removes tree access immediately without changing either person&apos;s household memberships.
+
 ## 2026-11-14 — Linked member profiles and relationship-to-me tree details
 
 - Accepted household invitations and approved Family Code requests now create a linked tree profile for the accepted account inside that family. It is seeded from the person&apos;s own account profile, while family relationship edges remain deliberately unguessed.

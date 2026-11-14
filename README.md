@@ -91,6 +91,10 @@ After applying [`20261114144410_account_id_family_join_requests.sql`](supabase/m
 
 Apply [`20261114145707_link_members_to_tree_profiles.sql`](supabase/migrations/20261114145707_link_members_to_tree_profiles.sql) after that migration to automatically create an accepted member&apos;s linked tree profile and show saved family relationships from the signed-in person&apos;s perspective. The app never guesses a parent, child, or other relationship; an owner/admin records those connections in the Family tree.
 
+### Tree-only sharing
+
+Apply [`20261114150350_tree_only_sharing.sql`](supabase/migrations/20261114150350_tree_only_sharing.sql) to share a family tree without sharing a household workspace. A family owner/admin sends a tree-only invitation to a Jibon ID from the Family tree; the recipient accepts it in **Shared trees**. This grants read-only access to that tree and its authorized portraits only—never tasks, bills, appointments, documents, finances, shopping, reminders, or household profiles.
+
 ### Optional collaboration email delivery
 
 Migration [`20261114062631_add_collaboration_email_delivery.sql`](supabase/migrations/20261114062631_add_collaboration_email_delivery.sql) adds a private retry queue for household invitations and family-tree profile claims. The browser can read only delivery labels such as **Email queued** or **Email sent**; email addresses and raw invitation tokens stay in the RLS-protected server queue. Links continue to be shown as a manual fallback when delivery has not been configured.

@@ -7,7 +7,10 @@ export async function treeSession() {
 }
 export async function familyPermission(db: Awaited<ReturnType<typeof createClient>>, familyId: string, userId: string, edit = false) {
   const { data, error } = await db.from("family_memberships").select("role").eq("family_id", familyId).eq("user_id", userId).maybeSingle();
-  return !error && !!data && (!edit || data.role === "owner" || data.role === "admin");
+  if (!error && data) return !edit || data.role === "owner" || data.role === "admin";
+  if (edit) return false;
+  const { data: canView, error: accessError } = await db.rpc("can_view_family_tree", { p_family_id: familyId });
+  return !accessError && canView === true;
 }
 export function rejectCrossOrigin(request: Request) {
   const origin = request.headers.get("origin");

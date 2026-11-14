@@ -17,6 +17,9 @@ export const invitationIdInput = z.object({ id: z.string().uuid("Choose a valid 
 export const familyIdInput = z.object({ family_id: z.string().uuid("Choose a valid family.") });
 export const familyJoinRequestInput = z.object({ family_code: familyCodeInput });
 export const joinRequestReviewInput = z.object({ id: z.string().uuid("Choose a valid join request."), approved: z.boolean() });
+export const treeShareInviteInput = z.object({ family_id: z.string().uuid("Choose a valid family."), jibon_id: jibonIdInput });
+export const treeShareResponseInput = z.object({ id: z.string().uuid("Choose a valid tree share."), accept: z.boolean() });
+export const treeShareRevokeInput = z.object({ id: z.string().uuid("Choose a valid tree share.") });
 export const collaboratorRoleInput = z.object({ role: z.enum(["owner", "admin", "member"]) });
 export const smartAddResponse = z.object({ kind: z.enum(["task", "bill", "appointment"]).nullable(), proposal: z.record(z.string(), z.unknown()).nullable(), needs_clarification: z.boolean(), questions: z.array(z.string()).max(3) });
 
