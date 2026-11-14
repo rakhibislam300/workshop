@@ -2,6 +2,12 @@
 
 This is the single running record of meaningful application changes, security decisions, verification, and known setup gaps.
 
+## 2026-11-14 — Dashboard sign-in recovery
+
+- Reworked dashboard workspace loading to fetch memberships and visible families in two explicit, RLS-respecting queries instead of relying on an embedded relation that could be empty during account or invitation transitions.
+- Added a safe signed-in recovery path for a legacy account with no membership: it creates a private owner workspace through the existing authenticated `create_family` RPC, then reloads memberships.
+- Made the optional profile and activity-history reads non-blocking. Tasks, bills, appointments, and family visibility remain required; their server-side errors are logged with a narrow operation label without exposing database details to the browser.
+
 ## Current operating mode
 
 - **Run target:** localhost only.
