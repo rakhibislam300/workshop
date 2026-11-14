@@ -16,6 +16,12 @@ This is the single running record of meaningful application changes, security de
 - Updated `.env.example` and the local setup/acceptance instructions to use Gemini. The revoked key shared earlier was never written to any repository file.
 - Verified `npm run typecheck` and `npm run lint`; production compilation and a configured-key live request remain pending in this entry.
 
+## 2026-11-14 — New-account workspace repair
+
+- Fixed a post-collaboration signup gap: the original Auth trigger created a profile but not the account&apos;s first family workspace or owner membership. Newly registered accounts could therefore sign in successfully but fail to load the dashboard.
+- Added and applied `20261114070000_ensure_new_user_family_workspace.sql`. The auth trigger now atomically creates the profile, a named household, an owner membership, and a creation activity record for every future signup.
+- The migration safely backfilled only profiles with no memberships. Existing families, roles, records, and invitation memberships were left untouched. Live verification after migration found zero profiles without a family workspace.
+
 ### Security hardening follow-up
 
 - Applied a shared same-origin guard to every browser-triggered route that creates, changes, deletes, or triggers paid AI processing for protected household data: family management, invitation acceptance, reminders, documents, Smart Add, family assistant, finance summaries, shopping suggestions, and profile operations.
