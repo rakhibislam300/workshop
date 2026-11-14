@@ -2,6 +2,13 @@
 
 This is the single running record of meaningful application changes, security decisions, verification, and known setup gaps.
 
+## 2026-11-14 — Linked member profiles and relationship-to-me tree details
+
+- Accepted household invitations and approved Family Code requests now create a linked tree profile for the accepted account inside that family. It is seeded from the person&apos;s own account profile, while family relationship edges remain deliberately unguessed.
+- Added a secure **Add my profile** recovery action for members who joined before this behavior. It creates at most one linked tree profile per account per family.
+- Tree-person details now show a declared relationship relative to the signed-in person, including short recorded paths such as parent → grandparent. The UI explicitly reports when no relationship has yet been recorded rather than fabricating one.
+- Added `20261114145707_link_members_to_tree_profiles.sql`. It permits one linked tree profile per account per family, retains self-managed personal details in the account profile, and safely synchronizes an accepted person&apos;s own edits across their linked tree profiles.
+
 ## 2026-11-14 — Jibon ID family invitations and Family Code requests
 
 - Added generated, non-guessable **Jibon IDs** for accounts and **Family Codes** for households. These are display identifiers only; internal UUIDs remain private and all authorization continues to be checked in PostgreSQL.

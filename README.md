@@ -89,6 +89,8 @@ An owner or admin creates an invite link in the dashboard, shares it only with t
 
 After applying [`20261114144410_account_id_family_join_requests.sql`](supabase/migrations/20261114144410_account_id_family_join_requests.sql), each account has a private-shareable **Jibon ID** and each owner-managed household has a rotatable **Family Code**. An owner/admin can send an in-app invitation to a Jibon ID; a person can enter a Family Code to request access, which must be approved by an owner/admin. These identifiers are not internal database UUIDs and do not grant access by themselves.
 
+Apply [`20261114145707_link_members_to_tree_profiles.sql`](supabase/migrations/20261114145707_link_members_to_tree_profiles.sql) after that migration to automatically create an accepted member&apos;s linked tree profile and show saved family relationships from the signed-in person&apos;s perspective. The app never guesses a parent, child, or other relationship; an owner/admin records those connections in the Family tree.
+
 ### Optional collaboration email delivery
 
 Migration [`20261114062631_add_collaboration_email_delivery.sql`](supabase/migrations/20261114062631_add_collaboration_email_delivery.sql) adds a private retry queue for household invitations and family-tree profile claims. The browser can read only delivery labels such as **Email queued** or **Email sent**; email addresses and raw invitation tokens stay in the RLS-protected server queue. Links continue to be shown as a manual fallback when delivery has not been configured.

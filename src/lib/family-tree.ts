@@ -59,9 +59,46 @@ export const connectionCommand = z.discriminatedUnion("action", [
   z.object({ action: z.literal("accept"), id: uuid, name: z.string().trim().min(1).max(120), consent: z.literal(true) }),
   z.object({ action: z.enum(["decline", "cancel", "disconnect", "block"]), id: uuid }),
 ]);
-export type TreePerson = z.infer<typeof personInput> & { id: string; family_id: string; updated_at: string };
+export type TreePerson = z.infer<typeof personInput> & { id: string; family_id: string; updated_at: string; linked_user_id?: string | null };
 export type TreeEdge = { id: string; from_person: string; to_person: string; kind: keyof typeof edgeKinds };
 export type RelativeConnection = { id: string; sender_id: string; recipient_id: string | null; recipient_email: string; sender_name: string; recipient_name: string | null; relationship: Relation; status: string; expires_at: string };
+
+const inverseTreeKind: Record<keyof typeof edgeKinds, keyof typeof edgeKinds> = {
+  parent: "child", father: "child", mother: "child", adoptive_parent: "child", step_parent: "child", guardian: "child",
+  child: "parent", son: "parent", daughter: "parent", sibling: "sibling", brother: "sibling", sister: "sibling",
+  partner: "partner", spouse: "spouse", husband: "wife", wife: "husband", grandparent: "grandchild", grandfather: "grandchild", grandmother: "grandchild",
+  grandchild: "grandparent", grandson: "grandparent", granddaughter: "grandparent", aunt_uncle: "niece_nephew", aunt: "niece_nephew", uncle: "niece_nephew",
+  niece_nephew: "aunt_uncle", niece: "aunt_uncle", nephew: "aunt_uncle", cousin: "cousin", in_law: "in_law", other_relative: "other_relative",
+};
+function compactRelation(kind: keyof typeof edgeKinds) { return edgeKinds[kind].replace(/\s+of$/, "").toLowerCase(); }
+
+// Finds a short declared relationship path from the signed-in person. It never
+// invents lineage: labels only come from saved tree edges.
+export function relationshipToViewer(viewerId: string | undefined, targetId: string, edges: TreeEdge[]) {
+  if (!viewerId) return null;
+  if (viewerId === targetId) return "This is your linked family profile.";
+  const queue: Array<{ id: string; path: Array<keyof typeof edgeKinds> }> = [{ id: viewerId, path: [] }];
+  const seen = new Set([viewerId]);
+  while (queue.length) {
+    const current = queue.shift()!;
+    if (current.path.length >= 4) continue;
+    for (const edge of edges) {
+      let nextId: string | null = null; let relation: keyof typeof edgeKinds | null = null;
+      if (edge.to_person === current.id) { nextId = edge.from_person; relation = edge.kind; }
+      else if (edge.from_person === current.id) { nextId = edge.to_person; relation = inverseTreeKind[edge.kind]; }
+      if (!nextId || !relation || seen.has(nextId)) continue;
+      const path = [...current.path, relation];
+      if (nextId === targetId) {
+        if (path.length === 1) return `Your ${compactRelation(path[0])}.`;
+        if (path.length === 2 && path[0] === "parent" && path[1] === "parent") return "Your grandparent.";
+        if (path.length === 2 && path[0] === "child" && path[1] === "child") return "Your grandchild.";
+        return `Your ${compactRelation(path[0])}'s ${compactRelation(path[1])}${path.length > 2 ? " (through recorded family connections)" : ""}.`;
+      }
+      seen.add(nextId); queue.push({ id: nextId, path });
+    }
+  }
+  return "No declared relationship path to your linked profile yet.";
+}
 
 // Layout parent groups first, then place each child one generation lower. Partners,
 // siblings, cousins, and co-parents stay on one horizontal generation line.

@@ -28,8 +28,9 @@ export async function POST(request: Request) {
     const { error } = await db.rpc("respond_tree_profile_claim", { p_claim_id: input.data.id, p_action: input.data.response });
     return error ? fail(error.code === "P0001" ? error.message : "Could not update that profile request.") : Response.json({ ok: true });
   }
-  const { data: current, error: readError } = await db.from("tree_people").select("linked_user_id").eq("id", input.data.person_id).maybeSingle();
-  if (readError || !current || current.linked_user_id !== userId) return fail("You can only update your accepted profile.", 403);
-  const { error } = await db.from("tree_people").update(input.data.person).eq("id", input.data.person_id);
+  const { error } = await db.rpc("update_my_tree_profile", {
+    p_person_id: input.data.person_id, p_name: input.data.person.name, p_birth_year: input.data.person.birth_year,
+    p_death_year: input.data.person.death_year, p_birthplace: input.data.person.birthplace, p_biography: input.data.person.biography,
+  });
   return error ? fail("Could not save your profile.") : Response.json({ ok: true });
 }

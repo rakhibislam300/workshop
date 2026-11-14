@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   if (!input.success) return fail("Choose a family.");
   if (!await familyPermission(db, input.data, userId)) return fail("Family access denied.", 403);
   const [people, edges] = await Promise.all([
-    db.from("tree_people").select("id,family_id,name,birth_year,death_year,biography,birthplace,updated_at").eq("family_id", input.data).order("created_at"),
+    db.from("tree_people").select("id,family_id,name,birth_year,death_year,biography,birthplace,linked_user_id,updated_at").eq("family_id", input.data).order("created_at"),
     db.from("tree_edges").select("id,from_person,to_person,kind").eq("family_id", input.data),
   ]);
   if (people.error || edges.error) return fail("Could not load your tree. Please retry.", 500);
