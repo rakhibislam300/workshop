@@ -8,6 +8,7 @@ import { appointmentInput, billInput, familyMemberInput, profileInput, taskInput
 import type { Appointment, Bill, Task, WorkspaceData } from "@/lib/types";
 import { LogoutButton } from "@/components/logout-button";
 import { FamilyManagement } from "@/components/family-management";
+import { FamilyTree } from "@/components/family-tree";
 import { FamilyAssistant } from "@/components/family-assistant";
 import { ReminderCenter } from "@/components/reminder-center";
 import { DocumentVault } from "@/components/document-vault";
@@ -27,6 +28,7 @@ const sections = [
   { id: "shopping", label: "Shopping", icon: Plus },
   { id: "assistant", label: "AI assistant", icon: Sparkles },
   { id: "profile", label: "Family & profile", icon: Users },
+  { id: "tree", label: "Family tree", icon: Users },
 ] as const;
 type Tab = typeof sections[number]["id"];
 type SmartProposal = { kind: "task" | "bill" | "appointment"; proposal: Record<string, unknown> };
@@ -77,7 +79,8 @@ export function DashboardClient({ data }: { data: WorkspaceData }) {
       {tab === "tasks" && <Tasks data={data} members={members} filter={taskFilter} setFilter={setTaskFilter} addTask={addTask} edit={editTask} setEdit={setEditTask} save={saveTask} mutate={mutate} busy={busy} />}
       {tab === "bills" && <Bills data={data} add={addBill} edit={editBill} setEdit={setEditBill} save={saveBill} mutate={mutate} busy={busy} />}
       {tab === "appointments" && <Appointments data={data} members={members} now={clock.getTime()} add={addAppointment} edit={editAppointment} setEdit={setEditAppointment} save={saveAppointment} mutate={mutate} busy={busy} />}
-      {tab === "profile" && <Profile data={data} onSubmit={saveProfile} busy={busy} />}
+      {tab === "profile" && <><div className="mx-auto mb-5 max-w-2xl rounded-xl border border-teal-200 bg-teal-50 p-5"><h2 className="font-bold">Your family, across generations</h2><p className="my-2 text-sm text-slate-600">Build your family tree with photos and connect with relatives in other households.</p><button className="button" onClick={() => setTab("tree")}>Open family tree & invitations</button></div><Profile data={data} onSubmit={saveProfile} busy={busy} /></>}
+      {tab === "tree" && <FamilyTree key={data.activeFamily.id} familyId={data.activeFamily.id} familyName={data.activeFamily.name} role={data.activeFamily.role} userId={data.userId} displayName={data.profile?.display_name || ""} members={data.members}/>}
       {editMember && <Modal title="Edit household profile" onClose={() => setEditMember(null)}><FamilyMemberForm value={editMember} onSubmit={saveMember} busy={busy}/></Modal>}
       {tab === "reminders" && <ReminderCenter familyId={data.activeFamily.id} tasks={data.tasks} bills={data.bills} appointments={data.appointments}/>}
       {tab === "calendar" && <CalendarCenter familyId={data.activeFamily.id} userId={data.userId} locale={data.profile?.locale} tasks={data.tasks} bills={data.bills} appointments={data.appointments}/>}

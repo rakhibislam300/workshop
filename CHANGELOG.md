@@ -8,6 +8,17 @@ This is the single running record of meaningful application changes, security de
 - **Deployment status:** intentionally deferred; no Vercel deployment should be attempted until local Supabase acceptance tests pass.
 - **Current start command:** `npm run dev` after creating `.env.local` from `.env.example` and applying the Supabase migration.
 
+## 2026-11-14 — Family tree and cross-household relationships
+
+- Added a private, household-scoped family tree with people profiles, birth/death years, hometowns, biographies, portrait uploads, parent/adoptive/step-parent/partner edges, generation layout, tree/list views, search, zoom, and responsive empty/loading/error states.
+- Existing local household profiles can be used as a starting name for a new tree profile. Tree profiles remain separate from task-assignment profiles so existing responsibilities are not changed.
+- Added private `family-tree-photos` Storage with a 3 MB JPG/PNG/WebP limit. Objects use exact family/person paths, remain non-public, and are read through an authenticated no-cache route rather than permanent URLs.
+- Added account-level relationship invitations for users with independent households. Invitations require both sides to agree to their displayed name and declared relationship. The recipient can accept, decline, or block; the sender can cancel; either party can disconnect an accepted connection. Invitations expire after fourteen days and currently appear in-app only.
+- Relationship connections deliberately do **not** grant family membership or access to tasks, bills, documents, photos, or either household’s tree. Accepted relatives may be added as a separate local tree name, but trees are never automatically merged and no ancestry is inferred from a connection.
+- Applied three additive database migrations: `20261114051943_family_tree_connections.sql`, `20261114053000_tree_photo_policy_fix.sql`, and `20261114054500_tree_concurrency_guards.sql`. They add RLS, least-privilege grants, role-aware policies, cycle prevention, storage enforcement, validated consent RPCs, rate limiting, advisory locks, and activity history. Existing data was not altered.
+- Added rollback-based SQL regression coverage in `supabase/tests/family_tree.sql`. It verified owner/admin/member permissions, cross-family tree isolation, ancestry-cycle rejection, invitation visibility/consent, blocking, disconnecting, cascading edge deletion, and the invariant that acceptance cannot add a family membership.
+- Verified `npm run lint`, `npm run typecheck`, `npm run build`, `git diff --check`, migration execution, and a signed-in localhost production UI pass. The remaining manual acceptance pass is two real registered accounts creating and accepting an invitation, and a real portrait upload/delete from the browser.
+
 ## 2026-11-14 — Frontend styling repair and dashboard navigation
 
 - Fixed the missing production Tailwind utilities: added the pinned Tailwind PostCSS plugin and shared PostCSS configuration, and removed the Turbopack-only loader configuration/dependency. Both development and Webpack production builds now use the same CSS processing setup.

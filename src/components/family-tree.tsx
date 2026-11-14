@@ -1,0 +1,91 @@
+"use client";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { GitBranch, Plus, UserRound } from "lucide-react";
+import { edgeKinds, treeLayout, type TreeEdge, type TreePerson } from "@/lib/family-tree";
+import type { FamilyMember, FamilyRole } from "@/lib/types";
+import { RelativeConnections } from "@/components/relative-connections";
+
+const blank = { name: "", birth_year: null, death_year: null, biography: "", birthplace: "" };
+function Portrait({ person, revision }: { person: TreePerson; revision: number }) {
+  const [missing, setMissing] = useState(false);
+  return <div className="mx-auto grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-white bg-teal-100 text-teal-800 shadow-sm">{missing ? <UserRound size={30}/> : /* Authenticated proxy deliberately avoids the public image optimizer. */
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={`/api/family-tree/photo/${person.id}?v=${revision}`} alt={`Portrait of ${person.name}`} className="h-full w-full object-cover" onError={() => setMissing(true)}/>}</div>;
+}
+export function FamilyTree({ familyId, familyName, role, userId, displayName, members }: { familyId: string; familyName: string; role: FamilyRole; userId: string; displayName: string; members: FamilyMember[] }) {
+  const [people, setPeople] = useState<TreePerson[]>([]); const [edges, setEdges] = useState<TreeEdge[]>([]);
+  const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(""); const [message, setMessage] = useState("");
+  const [editing, setEditing] = useState<Partial<TreePerson> | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [view, setView] = useState<"tree" | "list">("tree"); const [search, setSearch] = useState(""); const [zoom, setZoom] = useState(1);
+  const [revision, setRevision] = useState(0);
+  const canEdit = role !== "member";
+  const layout = useMemo(() => treeLayout(people, edges), [people, edges]);
+  const person = people.find(p => p.id === selected);
+  const names = new Map(people.map(p => [p.id, p.name]));
+  const load = useCallback(async () => {
+    const r = await fetch(`/api/family-tree?family_id=${familyId}`, { cache: "no-store" }); const p = await r.json();
+    if (!r.ok) throw new Error(p.error); setPeople(p.people); setEdges(p.edges);
+  }, [familyId]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`/api/family-tree?family_id=${familyId}`, { cache: "no-store", signal: controller.signal })
+      .then(async r => { const p = await r.json(); if (!r.ok) throw new Error(p.error); return p; })
+      .then(p => { setPeople(p.people); setEdges(p.edges); })
+      .catch(e => { if (!controller.signal.aborted) setError(e.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [familyId]);
+  async function run(work: () => Promise<Response>, success: string) {
+    setBusy(true); setError(""); setMessage("");
+    try { const r = await work(); const p = await r.json(); if (!r.ok) throw new Error(p.error); await load(); setRevision(v => v+1); setMessage(success); return p; }
+    catch(e) { setError(e instanceof Error ? e.message : "Could not save. Please retry."); return null; }
+    finally { setBusy(false); }
+  }
+  const command = (body: object, success: string) => run(() => fetch("/api/family-tree", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, family_id: familyId }) }), success);
+  async function savePerson(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const f = new FormData(e.currentTarget);
+    const p = await command({ action: "save_person", id: editing?.id, person: { name: f.get("name"), birth_year: f.get("birth_year") ? Number(f.get("birth_year")) : null, death_year: f.get("death_year") ? Number(f.get("death_year")) : null, biography: f.get("biography"), birthplace: f.get("birthplace") } }, "Person saved. You can now add a photo and relationships.");
+    if (p) { setEditing(null); setSelected(p.id); }
+  }
+  async function saveEdge(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const f = new FormData(e.currentTarget);
+    await command({ action: "add_edge", from_person: f.get("from"), to_person: f.get("to"), kind: f.get("kind") }, "Relationship added.");
+  }
+  function addNamed(name: string) { setEditing({ ...blank, name }); document.getElementById("tree-editor")?.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  return <section className="space-y-6">
+    <div className="rounded-2xl bg-gradient-to-br from-teal-900 to-[#177C70] p-6 text-white sm:p-8"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="mb-2 text-xs font-bold uppercase tracking-widest text-teal-200">Our people, our story</p><h1 className="flex items-center gap-3 text-3xl font-extrabold"><GitBranch/> Family tree</h1><p className="mt-3 max-w-xl text-sm leading-relaxed text-teal-50">Celebrate the generations of {familyName}. Keep photos and stories together, and connect with relatives who have a household of their own.</p></div><span className="rounded-full bg-white/15 px-4 py-2 text-sm">{people.length} people · {edges.length} relationships</span></div></div>
+    {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
+    {message && <p role="status" className="rounded-xl bg-teal-50 p-4 text-sm text-teal-800">{message}</p>}
+    <section className="card space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold">Your generations</h2><p className="text-sm text-slate-500">Private to this household · {canEdit ? "Owners and admins can edit" : "Read-only access"}</p></div><div className="flex flex-wrap gap-2"><button className="button-secondary" disabled={busy} onClick={() => void run(async () => { await load(); return Response.json({}); }, "Tree refreshed.")}>Refresh</button>{canEdit && <button className="button" onClick={() => setEditing({ ...blank })}><Plus size={16}/> Add person</button>}</div></div>
+      <div className="flex flex-wrap items-center gap-3"><label className="min-w-40 flex-1"><span className="sr-only">Find a person</span><input className="field" placeholder="Find a person…" value={search} onChange={e => { setSearch(e.target.value); if (e.target.value) setView("list"); }}/></label><div className="flex gap-1 rounded-lg bg-slate-100 p-1">{(["tree", "list"] as const).map(v => <button key={v} aria-pressed={view === v} className={`rounded-md px-4 py-2 text-sm font-bold capitalize ${view === v ? "bg-white text-teal-800 shadow-sm" : "text-slate-500"}`} onClick={() => { setView(v); if (v === "tree") setSearch(""); }}>{v}</button>)}</div>{view === "tree" && <label className="text-xs font-semibold text-slate-600">Zoom<select className="ml-2 rounded border border-slate-200 p-2" value={zoom} onChange={e => setZoom(Number(e.target.value))}><option value={0.6}>60%</option><option value={0.8}>80%</option><option value={1}>100%</option><option value={1.2}>120%</option></select></label>}</div>
+      {loading ? <p role="status" className="py-12 text-center text-slate-500">Loading your family story…</p> : !people.length ? <div className="rounded-xl border border-dashed border-teal-200 bg-teal-50/50 px-5 py-12 text-center"><GitBranch className="mx-auto mb-4 text-teal-600" size={40}/><h3 className="font-bold">Every family story starts with a person</h3><p className="mx-auto mt-2 max-w-md text-sm text-slate-500">Add yourself or an older generation, then connect parents, children, and partners. People do not need a Jibon account.</p>{canEdit && <button className="button mt-5" onClick={() => setEditing({ ...blank, name: displayName })}>Start your tree</button>}</div>
+      : view === "list" ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{people.filter(p => p.name.toLowerCase().includes(search.toLowerCase())).map(p => <button key={p.id} className={`flex items-center gap-3 rounded-xl border p-4 text-left ${selected === p.id ? "border-teal-600 bg-teal-50" : "border-slate-200"}`} onClick={() => { setSelected(p.id); setEditing(null); }}><Portrait key={`${p.id}-${revision}`} person={p} revision={revision}/><div className="min-w-0 flex-1"><p className="break-words font-bold">{p.name}</p><p className="text-xs text-slate-500">{p.birth_year || "Birth year unknown"}{p.death_year ? ` – ${p.death_year}` : ""}</p></div></button>)}{!people.some(p => p.name.toLowerCase().includes(search.toLowerCase())) && <p className="p-4 text-sm text-slate-500">No matching people.</p>}</div>
+      : <div className="overflow-auto rounded-xl border border-teal-100 bg-[#f3f8f5]" tabIndex={0} aria-label="Scrollable family tree"><div style={{ width: layout.width * zoom, height: layout.height * zoom }}><div className="relative origin-top-left" style={{ width: layout.width, height: layout.height, transform: `scale(${zoom})` }}>
+        <svg className="pointer-events-none absolute inset-0" width={layout.width} height={layout.height} aria-hidden="true"><defs><marker id="tree-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#6b9e90"/></marker></defs>{edges.map(e => { const a = layout.positions.get(e.from_person); const b = layout.positions.get(e.to_person); if (!a || !b) return null; return e.kind === "partner" ? <path key={e.id} d={`M${a.x+90},${a.y+75} Q${(a.x+b.x)/2+90},${Math.min(a.y,b.y)-35} ${b.x+90},${b.y+75}`} fill="none" stroke="#b58a62" strokeWidth="2" strokeDasharray="6 5"/> : <path key={e.id} d={`M${a.x+90},${a.y+146} C${a.x+90},${a.y+190} ${b.x+90},${b.y-35} ${b.x+90},${b.y-4}`} fill="none" stroke="#6b9e90" strokeWidth="2" strokeDasharray={e.kind === "parent" ? undefined : "4 3"} markerEnd="url(#tree-arrow)"/>; })}</svg>
+        {layout.rows.map((_, i) => <span key={i} className="absolute left-3 text-[10px] font-bold uppercase tracking-wider text-teal-700" style={{ top: i*220+15 }}>Generation {i+1}</span>)}
+        {people.map(p => { const pos = layout.positions.get(p.id)!; return <button key={p.id} onClick={() => { setSelected(p.id); setEditing(null); }} aria-label={`View ${p.name}`} className={`absolute flex h-[146px] w-[180px] flex-col justify-center rounded-xl border bg-white p-3 text-center shadow-sm transition hover:shadow-md ${selected === p.id ? "border-teal-600 ring-2 ring-teal-100" : "border-slate-200"}`} style={{ left: pos.x, top: pos.y }}><Portrait key={`${p.id}-${revision}`} person={p} revision={revision}/><span className="mt-2 line-clamp-2 text-sm font-bold">{p.name}</span><span className="text-xs text-slate-500">{p.birth_year || "Year unknown"}{p.death_year ? ` – ${p.death_year}` : ""}</span></button>; })}
+      </div></div></div>}
+      <p className="text-xs leading-relaxed text-slate-500">Parent → child lines determine generations. Dashed green: adoptive or step-parent. Dashed brown: partner. Unconnected people start in the first row; generation numbers describe this tree only.</p>
+    </section>
+    <div id="tree-editor" className="scroll-mt-28">
+      {editing && canEdit && <form key={editing.id || editing.name || "new"} onSubmit={savePerson} className="card grid gap-4 sm:grid-cols-2"><h2 className="text-lg font-bold sm:col-span-2">{editing.id ? "Edit person" : "Add a person"}</h2>{!editing.id && members.length > 0 && <label className="text-sm font-semibold sm:col-span-2">Start from a household member (optional)<select className="field mt-1" defaultValue="" onChange={e => { const m = members.find(m => m.id === e.target.value); if (m) setEditing({ ...blank, name: m.name }); }}><option value="">Choose a name…</option>{members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select><span className="mt-1 block text-xs font-normal text-slate-500">Creates a separate tree profile; task assignments stay unchanged.</span></label>}
+        <label className="text-sm font-semibold sm:col-span-2">Full name<input name="name" className="field mt-1" defaultValue={editing.name} maxLength={120} required autoFocus/></label>
+        <label className="text-sm font-semibold">Birth year (optional)<input name="birth_year" type="number" min={1000} max={2200} className="field mt-1" defaultValue={editing.birth_year ?? ""}/></label>
+        <label className="text-sm font-semibold">Death year (if applicable)<input name="death_year" type="number" min={1000} max={2200} className="field mt-1" defaultValue={editing.death_year ?? ""}/></label>
+        <label className="text-sm font-semibold sm:col-span-2">Birthplace / hometown<input name="birthplace" className="field mt-1" defaultValue={editing.birthplace} maxLength={160}/></label>
+        <label className="text-sm font-semibold sm:col-span-2">Their story<textarea name="biography" rows={4} className="field mt-1" defaultValue={editing.biography} maxLength={2000}/></label>
+        <p className="text-xs text-slate-500 sm:col-span-2">These details are visible to members of this household. Add information and photos you have permission to share.</p><div className="flex gap-2 sm:col-span-2"><button className="button" disabled={busy}>Save person</button><button type="button" className="button-secondary" disabled={busy} onClick={() => setEditing(null)}>Cancel</button></div>
+      </form>}
+      {person && !editing && <section className="card space-y-4"><div className="flex items-start gap-4"><Portrait key={`${person.id}-${revision}`} person={person} revision={revision}/><div className="flex-1"><h2 className="text-xl font-bold">{person.name}</h2><p className="text-sm text-slate-500">{person.birth_year ? `Born ${person.birth_year}` : "Birth year not recorded"}{person.death_year ? ` · Died ${person.death_year}` : ""}</p>{person.birthplace && <p className="text-sm text-slate-500">{person.birthplace}</p>}</div><button aria-label="Close person details" className="button-secondary" onClick={() => setSelected(null)}>Close</button></div>{person.biography && <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{person.biography}</p>}
+        {canEdit && <><div className="flex flex-wrap gap-2"><button className="button-secondary" disabled={busy} onClick={() => setEditing(person)}>Edit details</button><button className="button-secondary" disabled={busy} onClick={async () => { if (confirm(`Delete ${person.name}, their photo, and all their tree relationships?`)) { if (await command({ action: "delete_person", id: person.id }, "Person removed.")) setSelected(null); } }}>Delete person</button><button className="button-secondary" disabled={busy} onClick={() => { if (confirm("Remove this person's photo?")) void run(() => fetch(`/api/family-tree/photo/${person.id}`, { method: "DELETE" }), "Photo removed."); }}>Remove photo</button></div><label className="block rounded-xl bg-slate-50 p-4 text-sm font-semibold">Upload or replace photo <span className="font-normal text-slate-500">(JPG, PNG, WebP · up to 3 MB)</span><input className="mt-2 block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={e => { const file = e.target.files?.[0]; if (!file) return; const f = new FormData(); f.set("photo", file); void run(() => fetch(`/api/family-tree/photo/${person.id}`, { method: "POST", body: f }), "Photo saved."); e.target.value = ""; }}/></label></>}
+      </section>}
+    </div>
+    <section className="card space-y-4"><h2 className="text-lg font-bold">Family relationships</h2>{canEdit && people.length >= 2 && <form onSubmit={saveEdge} className="grid items-end gap-3 sm:grid-cols-3"><label className="text-sm font-semibold">Person<select name="from" className="field mt-1">{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label className="text-sm font-semibold">Relationship<select name="kind" className="field mt-1">{Object.entries(edgeKinds).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></label><label className="text-sm font-semibold">To person<select name="to" className="field mt-1" defaultValue={people[1].id}>{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button className="button sm:col-span-3" disabled={busy}>Add relationship</button></form>}
+      {edges.length ? <ul className="divide-y divide-slate-100">{edges.map(e => <li key={e.id} className="flex items-center justify-between gap-3 py-3 text-sm"><p><b>{names.get(e.from_person)}</b> <span className="text-slate-500">is {edgeKinds[e.kind].toLowerCase()}</span> <b>{names.get(e.to_person)}</b></p>{canEdit && <button className="shrink-0 rounded-lg px-3 py-2 font-semibold text-red-700" disabled={busy} onClick={() => { if (confirm("Remove this relationship? Both people will remain.")) void command({ action: "delete_edge", id: e.id }, "Relationship removed."); }}>Remove</button>}</li>)}</ul> : <p className="text-sm text-slate-500">Add at least two people, then describe how they are related.</p>}
+    </section>
+    <RelativeConnections userId={userId} displayName={displayName} onAddPerson={canEdit ? addNamed : undefined}/>
+  </section>;
+}
