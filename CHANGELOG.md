@@ -2,6 +2,13 @@
 
 This is the single running record of meaningful application changes, security decisions, verification, and known setup gaps.
 
+## 2026-11-14 — Jibon ID family invitations and Family Code requests
+
+- Added generated, non-guessable **Jibon IDs** for accounts and **Family Codes** for households. These are display identifiers only; internal UUIDs remain private and all authorization continues to be checked in PostgreSQL.
+- Family owners/admins can now invite an existing account by Jibon ID. The invitation is stored in Supabase PostgreSQL and appears in the recipient&apos;s in-app invitation inbox; no link or email is required for this primary flow.
+- Added owner-controlled Family Codes. Entering a code creates a durable join request, never an automatic membership. A family owner or admin must explicitly approve or decline the request.
+- Added `20261114144410_account_id_family_join_requests.sql`, protected route handlers, identity/access UI, code rotation, expiry-safe inbox acceptance, duplicate protection, and activity history. Email/link invitations remain available as a backward-compatible fallback.
+
 ## 2026-11-14 — Recipient household invitation inbox
 
 - Added an **Invitations** destination under the dashboard Family navigation. A signed-in person can now see pending household invitations addressed to their exact account email and accept one directly from the app.

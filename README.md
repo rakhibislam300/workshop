@@ -85,6 +85,10 @@ The collaboration migration must be applied after the two original migrations:
 
 An owner or admin creates an invite link in the dashboard, shares it only with the invited email address, and the recipient signs in with that exact address before accepting. Recipients can also open **Family → Invitations** to review and accept pending household invitations in-app after applying [`20261114142107_family_invitation_inbox.sql`](supabase/migrations/20261114142107_family_invitation_inbox.sql). Owners can manage collaborator roles and removal; the database protects the final owner.
 
+### Jibon ID invitations and Family Codes
+
+After applying [`20261114144410_account_id_family_join_requests.sql`](supabase/migrations/20261114144410_account_id_family_join_requests.sql), each account has a private-shareable **Jibon ID** and each owner-managed household has a rotatable **Family Code**. An owner/admin can send an in-app invitation to a Jibon ID; a person can enter a Family Code to request access, which must be approved by an owner/admin. These identifiers are not internal database UUIDs and do not grant access by themselves.
+
 ### Optional collaboration email delivery
 
 Migration [`20261114062631_add_collaboration_email_delivery.sql`](supabase/migrations/20261114062631_add_collaboration_email_delivery.sql) adds a private retry queue for household invitations and family-tree profile claims. The browser can read only delivery labels such as **Email queued** or **Email sent**; email addresses and raw invitation tokens stay in the RLS-protected server queue. Links continue to be shown as a manual fallback when delivery has not been configured.

@@ -7,9 +7,16 @@ export const appointmentInput = z.object({ title: z.string().trim().min(1).max(1
 export const profileInput = z.object({ display_name: z.string().trim().min(1, "Enter the name you want your household to use.").max(80) });
 export const familyMemberInput = z.object({ name: z.string().trim().min(1, "Enter a household member name.").max(80), relationship: z.string().trim().max(80).nullable().optional() });
 export const familyCreateInput = z.object({ name: z.string().trim().min(1, "Enter a family name.").max(120) });
-export const familyInvitationInput = z.object({ email: z.string().trim().email("Enter a valid email address.").max(320) });
+export const jibonIdInput = z.string().trim().toUpperCase().regex(/^JBN-U-[A-F0-9]{10}$/, "Enter a valid Jibon ID.");
+export const familyCodeInput = z.string().trim().toUpperCase().regex(/^JBN-F-[A-F0-9]{10}$/, "Enter a valid Family Code.");
+export const familyInvitationInput = z.object({ email: z.string().trim().email("Enter a valid email address.").max(320).optional(), jibon_id: jibonIdInput.optional() }).superRefine((value, context) => {
+  if ((value.email ? 1 : 0) + (value.jibon_id ? 1 : 0) !== 1) context.addIssue({ code: z.ZodIssueCode.custom, message: "Enter either a Jibon ID or an email address." });
+});
 export const invitationTokenInput = z.object({ token: z.string().uuid("This invitation link is invalid.") });
 export const invitationIdInput = z.object({ id: z.string().uuid("Choose a valid invitation.") });
+export const familyIdInput = z.object({ family_id: z.string().uuid("Choose a valid family.") });
+export const familyJoinRequestInput = z.object({ family_code: familyCodeInput });
+export const joinRequestReviewInput = z.object({ id: z.string().uuid("Choose a valid join request."), approved: z.boolean() });
 export const collaboratorRoleInput = z.object({ role: z.enum(["owner", "admin", "member"]) });
 export const smartAddResponse = z.object({ kind: z.enum(["task", "bill", "appointment"]).nullable(), proposal: z.record(z.string(), z.unknown()).nullable(), needs_clarification: z.boolean(), questions: z.array(z.string()).max(3) });
 

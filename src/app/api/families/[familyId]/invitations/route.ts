@@ -30,7 +30,12 @@ export async function POST(request: Request, ctx: InvitationRouteContext) {
   const { data: claims, error: authError } = await supabase.auth.getClaims();
   const userId = claims?.claims?.sub;
   if (authError || !userId) return NextResponse.json({ error: "Sign in to invite a collaborator." }, { status: 401 });
-  const invitedEmail = parsed.data.email.toLowerCase();
+  if (parsed.data.jibon_id) {
+    const { error } = await supabase.rpc("create_family_invitation_by_jibon_id", { p_family_id: familyId, p_jibon_id: parsed.data.jibon_id });
+    if (error) return NextResponse.json({ error: error.message || "Could not create the account invitation." }, { status: 400 });
+    return NextResponse.json({ delivery: "inbox", direct: true }, { status: 201 });
+  }
+  const invitedEmail = parsed.data.email!.toLowerCase();
   const { data: existing, error: existingError } = await supabase.from("family_invitations")
     .select("id").eq("family_id", familyId).eq("invited_email", invitedEmail).eq("status", "pending").maybeSingle();
   if (existingError) return NextResponse.json({ error: "Could not check existing invitations. Please retry." }, { status: 403 });
