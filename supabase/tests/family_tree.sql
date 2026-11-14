@@ -17,6 +17,7 @@ begin
  assert current_user='authenticated','RLS test must run authenticated';
  insert into public.tree_people(id,family_id,name) values(p1,fa,'Parent'),(p2,fa,'Child'),(p3,fa,'Grandchild');
  insert into public.tree_edges(family_id,from_person,to_person,kind) values(fa,p1,p2,'parent'),(fa,p2,p3,'adoptive_parent');
+ insert into public.tree_edges(family_id,from_person,to_person,kind) values(fa,p2,p3,'cousin');
  blocked:=false;
  begin insert into public.tree_edges(family_id,from_person,to_person,kind) values(fa,p3,p1,'parent');
  exception when raise_exception then blocked:=true; end;
@@ -70,8 +71,8 @@ begin
  update public.family_memberships set role='admin' where family_id=fa and user_id=outsider;
  perform set_config('role','authenticated',true);
  perform set_config('request.jwt.claim.sub',outsider::text,true);
- insert into public.tree_edges(family_id,from_person,to_person,kind) values(fa,p1,p3,'parent');
- assert exists(select 1 from public.tree_edges where from_person=p1 and to_person=p3),'Admin edit succeeds';
+ insert into public.tree_edges(family_id,from_person,to_person,kind) values(fa,p3,p1,'son');
+ assert exists(select 1 from public.tree_edges where from_person=p3 and to_person=p1 and kind='son'),'Admin can add a son relationship';
  perform set_config('role','postgres',true);
 end $$;
 rollback;

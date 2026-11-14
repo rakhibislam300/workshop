@@ -19,6 +19,12 @@ This is the single running record of meaningful application changes, security de
 - Added rollback-based SQL regression coverage in `supabase/tests/family_tree.sql`. It verified owner/admin/member permissions, cross-family tree isolation, ancestry-cycle rejection, invitation visibility/consent, blocking, disconnecting, cascading edge deletion, and the invariant that acceptance cannot add a family membership.
 - Verified `npm run lint`, `npm run typecheck`, `npm run build`, `git diff --check`, migration execution, and a signed-in localhost production UI pass. The remaining manual acceptance pass is two real registered accounts creating and accepting an invitation, and a real portrait upload/delete from the browser.
 
+### Relationship vocabulary follow-up
+
+- Expanded both tree and cross-household relationship choices to include father, mother, son, daughter, brother, sister, spouse, husband, wife, grandfather, grandmother, grandson, granddaughter, aunt, uncle, niece, nephew, cousin, in-law, guardian, adoptive/step-parent, and a general relative label.
+- Added `20261114054026_expand_relationship_labels.sql`. Parent/child labels keep generation layout and ancestry-loop protection accurate; extended labels such as cousin and in-law are displayed as declared connections and do not fabricate missing family links.
+- Re-ran the full rollback-based family-tree authorization suite plus isolated Son/Cousin and Daughter invitation checks. All passed, and the signed-in localhost UI now shows the expanded selectors.
+
 ## 2026-11-14 — Frontend styling repair and dashboard navigation
 
 - Fixed the missing production Tailwind utilities: added the pinned Tailwind PostCSS plugin and shared PostCSS configuration, and removed the Turbopack-only loader configuration/dependency. Both development and Webpack production builds now use the same CSS processing setup.
