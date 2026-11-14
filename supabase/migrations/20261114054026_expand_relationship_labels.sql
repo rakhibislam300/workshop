@@ -1,4 +1,4 @@
-+-- Expand labels without changing existing family records or permissions.
+-- Expand labels without changing existing family records or permissions.
 alter table public.tree_edges drop constraint tree_edges_kind_check;
 alter table public.tree_edges add constraint tree_edges_kind_check check(kind in (
   'parent','father','mother','adoptive_parent','step_parent','guardian',

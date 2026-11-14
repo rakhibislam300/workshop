@@ -83,13 +83,19 @@ The collaboration migration must be applied after the two original migrations:
 13. [`20261113197000_add_profile_locale.sql`](supabase/migrations/20261113197000_add_profile_locale.sql)
 14. [`20261113198000_add_missing_foreign_key_indexes.sql`](supabase/migrations/20261113198000_add_missing_foreign_key_indexes.sql)
 
-An owner or admin creates an invite link in the dashboard, shares it only with the invited email address, and the recipient signs in with that exact address before accepting. Recipients can also open **Family → Invitations** to review and accept pending household invitations in-app after applying [`20261114142107_family_invitation_inbox.sql`](supabase/migrations/20261114142107_family_invitation_inbox.sql). Owners can manage collaborator roles and removal; the database protects the final owner.
+Owners can manage collaborator roles and removal; the database protects the final owner. Recipients can also open **Family → Invitations** to review and accept pending household invitations in-app after applying [`20261114142107_family_invitation_inbox.sql`](supabase/migrations/20261114142107_family_invitation_inbox.sql).
 
 ### Jibon ID invitations and Family Codes
 
 After applying [`20261114144410_account_id_family_join_requests.sql`](supabase/migrations/20261114144410_account_id_family_join_requests.sql), each account has a private-shareable **Jibon ID** and each owner-managed household has a rotatable **Family Code**. An owner/admin can send an in-app invitation to a Jibon ID; a person can enter a Family Code to request access, which must be approved by an owner/admin. These identifiers are not internal database UUIDs and do not grant access by themselves.
 
 Apply [`20261114145707_link_members_to_tree_profiles.sql`](supabase/migrations/20261114145707_link_members_to_tree_profiles.sql) after that migration to automatically create an accepted member&apos;s linked tree profile and show saved family relationships from the signed-in person&apos;s perspective. The app never guesses a parent, child, or other relationship; an owner/admin records those connections in the Family tree.
+
+### Relationship-aware household invitations
+
+After applying [`20261114192504_relationship_aware_family_invitations.sql`](supabase/migrations/20261114192504_relationship_aware_family_invitations.sql), the **Family & profile → Family members** form is the single household-invitation workflow. The inviting owner/admin first selects their own linked tree profile, then supplies the invitee&apos;s name and declared relationship. A Jibon-ID recipient receives an in-app invitation; an email recipient receives an email-bound secure link.
+
+Nothing is added to the family tree until the recipient accepts. Acceptance atomically grants the household membership, creates or reuses one profile linked to that recipient&apos;s account, and records the selected tree edge. The email acceptance screen and in-app inbox show the relationship context before the person confirms. This is intentionally distinct from tree-only sharing below.
 
 ### Tree-only sharing
 
@@ -209,6 +215,7 @@ All verification commands pass in this workspace. The default Turbopack build wa
 13. Create two expense categories and transactions with decimal paise amounts, then confirm the month totals and category budget remaining/overage exactly match the entered values. Add a recurring bill and subscription, pause/resume each, export the selected month CSV, and verify a second account outside the family cannot see or export any financial data. With `GEMINI_API_KEY`, request a monthly summary and verify it reports only the selected family/month and makes no database change.
 14. Create a shared list, add items with different quantities/units, mark one low stock and one purchased, then confirm all current family members see the same state. Archive and restore the list, verify another family cannot access it, and—with `GEMINI_API_KEY`—request a suggestion and confirm no item exists until **Add** is selected.
 15. Add appointments, bill due dates, and task due dates; verify calendar filters and day/week/month views. Create two appointments less than an hour apart to verify conflict treatment, export the ICS as a family member, confirm another family cannot export it, and change the calendar language through all four supported text locales.
+16. In **Family & profile**, add your linked family-tree profile if needed, then create a household invitation with a name and relationship. Accept it from a second account. Confirm the person becomes a workspace member, exactly one linked profile appears in the tree, and the declared relationship edge connects to the inviter&apos;s selected profile. Separately verify a **tree-only share** still never adds a family membership or exposes household data.
 
 ## Later: deploy to Vercel
 

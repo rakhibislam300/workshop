@@ -2,6 +2,13 @@
 
 This is the single running record of meaningful application changes, security decisions, verification, and known setup gaps.
 
+## 2026-11-15 — Relationship-aware household invitations
+
+- Replaced the generic household-member invite form with one relationship-aware flow. Owners/admins now provide the invited person&apos;s name, relationship, and select their own linked tree profile as the connection anchor. It supports both Jibon-ID inbox delivery and the existing email-bound secure-link fallback.
+- On acceptance, one guarded database transaction grants household membership, creates or reuses exactly one family-scoped profile linked to the recipient&apos;s account, and adds the declared tree edge. It never creates a tree profile or relationship before the recipient accepts.
+- Added recipient-only relationship context to both the in-app invitation inbox and email-link acceptance page. The unrelated `relative_connections` and tree-only sharing paths are unchanged: tree-only viewers still receive no workspace access.
+- Added `20261114192504_relationship_aware_family_invitations.sql` and rollback-based coverage in `supabase/tests/relationship_aware_family_invitations.sql`. The migration also repairs two leading diff-marker characters in older, not-yet-applied migration comments so a fresh migration chain can execute.
+
 ## 2026-11-14 — Tree-only sharing
 
 - Added a separate, invitation-based **tree-only sharing** channel. Owners/admins invite a Jibon ID to view one family tree; the recipient explicitly accepts it from **Shared trees**.

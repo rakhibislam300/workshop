@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { edgeKinds } from "@/lib/family-tree";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
 export const taskInput = z.object({ title: z.string().trim().min(1).max(160), description: z.string().trim().max(2000).nullable().optional(), due_date: date.nullable().optional(), priority: z.enum(["low", "medium", "high"]), assigned_member_id: z.string().uuid().nullable().optional() });
@@ -9,7 +10,14 @@ export const familyMemberInput = z.object({ name: z.string().trim().min(1, "Ente
 export const familyCreateInput = z.object({ name: z.string().trim().min(1, "Enter a family name.").max(120) });
 export const jibonIdInput = z.string().trim().toUpperCase().regex(/^JBN-U-[A-F0-9]{10}$/, "Enter a valid Jibon ID.");
 export const familyCodeInput = z.string().trim().toUpperCase().regex(/^JBN-F-[A-F0-9]{10}$/, "Enter a valid Family Code.");
-export const familyInvitationInput = z.object({ email: z.string().trim().email("Enter a valid email address.").max(320).optional(), jibon_id: jibonIdInput.optional() }).superRefine((value, context) => {
+const relationshipKinds = Object.keys(edgeKinds) as [keyof typeof edgeKinds, ...Array<keyof typeof edgeKinds>];
+export const familyInvitationInput = z.object({
+  email: z.string().trim().email("Enter a valid email address.").max(320).optional(),
+  jibon_id: jibonIdInput.optional(),
+  invitee_name: z.string().trim().min(1, "Enter the invited person's name.").max(120),
+  invitee_relationship: z.enum(relationshipKinds, { message: "Choose their relationship." }),
+  inviter_tree_person_id: z.string().uuid("Choose your linked family-tree profile."),
+}).superRefine((value, context) => {
   if ((value.email ? 1 : 0) + (value.jibon_id ? 1 : 0) !== 1) context.addIssue({ code: z.ZodIssueCode.custom, message: "Enter either a Jibon ID or an email address." });
 });
 export const invitationTokenInput = z.object({ token: z.string().uuid("This invitation link is invalid.") });

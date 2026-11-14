@@ -1,4 +1,4 @@
-+-- Account-linked tree profiles: a household can request a verified Jibon user
+-- Account-linked tree profiles: a household can request a verified Jibon user
 -- to maintain their own personal record without granting tree relationship control.
 alter table public.tree_people add column linked_user_id uuid references auth.users(id) on delete set null;
 alter table public.tree_people add column linked_at timestamptz;

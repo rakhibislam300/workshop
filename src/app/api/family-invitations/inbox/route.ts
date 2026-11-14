@@ -13,7 +13,7 @@ export async function GET() {
   const supabase = await createClient();
   const { data: claims, error: authError } = await supabase.auth.getClaims();
   if (authError || !claims?.claims?.sub) return NextResponse.json({ error: "Sign in to view your invitation inbox." }, { status: 401 });
-  const { data, error } = await supabase.rpc("get_my_family_invitations");
+  const { data, error } = await supabase.rpc("get_relationship_aware_family_invitations");
   if (error) return NextResponse.json({ error: "Could not load your invitation inbox." }, { status: 500 });
   return NextResponse.json({ invitations: data ?? [] });
 }
