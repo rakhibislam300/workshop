@@ -8,6 +8,15 @@ This is the single running record of meaningful application changes, security de
 - **Deployment status:** intentionally deferred; no Vercel deployment should be attempted until local Supabase acceptance tests pass.
 - **Current start command:** `npm run dev` after creating `.env.local` from `.env.example` and applying the Supabase migration.
 
+## 2026-11-14 — Frontend styling repair and dashboard navigation
+
+- Fixed the missing production Tailwind utilities: added the pinned Tailwind PostCSS plugin and shared PostCSS configuration, and removed the Turbopack-only loader configuration/dependency. Both development and Webpack production builds now use the same CSS processing setup.
+- Reorganized the dashboard into eleven focused navigation sections. Reminders, calendar, documents, finances, shopping, and AI now render only in their selected section; household profiles live with family/account management.
+- Added a desktop sidebar with icons and selected-section styling, horizontally scrollable mobile navigation, and mobile-visible family switching, invitation, and new-family controls.
+- Added accessible names for Smart Add and household-profile inputs, responsive Smart Add form layout, and reduced-motion styling.
+- Verified lint, TypeScript, and production compilation. Checked the compiled CSS explicitly for grid, width, and typography utilities and for the absence of raw Tailwind directives. Visually checked the restored homepage and login layout; verified the homepage has no horizontal overflow at a 390px viewport.
+- Restarted the localhost production server with the corrected build. Signed-in dashboard visual/interaction acceptance remains pending because the current browser session is signed out. No database or authentication changes were made.
+
 ## 2026-11-13 — Phase 9 hardening and local release audit
 
 - Added and applied `20261113198000_add_missing_foreign_key_indexes.sql`. It supplies fourteen missing single/composite foreign-key indexes across family, invitation, reminder, finance, and shopping tables. The Supabase performance advisor now reports **zero unindexed foreign keys**.
