@@ -22,6 +22,12 @@ This is the single running record of meaningful application changes, security de
 - Added and applied `20261114070000_ensure_new_user_family_workspace.sql`. The auth trigger now atomically creates the profile, a named household, an owner membership, and a creation activity record for every future signup.
 - The migration safely backfilled only profiles with no memberships. Existing families, roles, records, and invitation memberships were left untouched. Live verification after migration found zero profiles without a family workspace.
 
+## 2026-11-14 — Collaboration invitation recovery
+
+- Improved household collaboration invites to safely replace a recipient&apos;s existing pending invitation instead of failing on the one-pending-invite constraint. Reissuing cancels the older link and delivery queue, then returns one newest secure link with clear UI guidance.
+- The invitation acceptance page now shows the currently signed-in email and offers a link to sign in as a different account without losing the invitation token. Acceptance errors distinguish an email mismatch from a stale, expired, cancelled, or already-used link.
+- Clarified the product boundary: household collaboration is accepted from its secure link; cross-household family-tree relationships are reviewed and accepted inside the Family tree inbox and do not share household data.
+
 ### Security hardening follow-up
 
 - Applied a shared same-origin guard to every browser-triggered route that creates, changes, deletes, or triggers paid AI processing for protected household data: family management, invitation acceptance, reminders, documents, Smart Add, family assistant, finance summaries, shopping suggestions, and profile operations.

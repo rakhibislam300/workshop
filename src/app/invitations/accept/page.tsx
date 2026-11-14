@@ -10,5 +10,6 @@ export default async function InvitationAcceptPage({ searchParams }: { searchPar
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims?.sub) redirect(`/auth/login?next=${encodeURIComponent(`/invitations/accept?token=${token}`)}`);
-  return <InvitationAccept token={token} />;
+  const email = typeof data.claims.email === "string" ? data.claims.email : "your current account";
+  return <InvitationAccept token={token} signedInEmail={email} />;
 }

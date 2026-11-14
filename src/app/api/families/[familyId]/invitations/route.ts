@@ -30,13 +30,21 @@ export async function POST(request: Request, ctx: InvitationRouteContext) {
   const { data: claims, error: authError } = await supabase.auth.getClaims();
   const userId = claims?.claims?.sub;
   if (authError || !userId) return NextResponse.json({ error: "Sign in to invite a collaborator." }, { status: 401 });
+  const invitedEmail = parsed.data.email.toLowerCase();
+  const { data: existing, error: existingError } = await supabase.from("family_invitations")
+    .select("id").eq("family_id", familyId).eq("invited_email", invitedEmail).eq("status", "pending").maybeSingle();
+  if (existingError) return NextResponse.json({ error: "Could not check existing invitations. Please retry." }, { status: 403 });
+  if (existing) {
+    const { error: cancelError } = await supabase.from("family_invitations").delete().eq("id", existing.id).eq("family_id", familyId);
+    if (cancelError) return NextResponse.json({ error: "Could not replace the previous invitation. Please retry." }, { status: 403 });
+  }
   const token = crypto.randomUUID();
   const { data: invitation, error } = await supabase.from("family_invitations")
-    .insert({ family_id: familyId, invited_email: parsed.data.email.toLowerCase(), invited_by: userId, token_hash: await sha256(token) })
+    .insert({ family_id: familyId, invited_email: invitedEmail, invited_by: userId, token_hash: await sha256(token) })
     .select("id").single();
   if (error) return NextResponse.json({ error: error.message }, { status: 403 });
   const { error: queueError } = await supabase.rpc("queue_family_invitation_email", { p_invitation_id: invitation.id, p_token: token });
-  return NextResponse.json({ invitationUrl: `${new URL(request.url).origin}/invitations/accept?token=${token}`, emailDelivery: queueError ? "not_requested" : "queued" }, { status: 201 });
+  return NextResponse.json({ invitationUrl: `${new URL(request.url).origin}/invitations/accept?token=${token}`, emailDelivery: queueError ? "not_requested" : "queued", reissued: Boolean(existing) }, { status: 201 });
 }
 
 export async function DELETE(request: Request, ctx: InvitationRouteContext) {
