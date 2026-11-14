@@ -25,6 +25,12 @@ This is the single running record of meaningful application changes, security de
 - Added `20261114054026_expand_relationship_labels.sql`. Parent/child labels keep generation layout and ancestry-loop protection accurate; extended labels such as cousin and in-law are displayed as declared connections and do not fabricate missing family links.
 - Re-ran the full rollback-based family-tree authorization suite plus isolated Son/Cousin and Daughter invitation checks. All passed, and the signed-in localhost UI now shows the expanded selectors.
 
+### Two-parent tree connector follow-up
+
+- Updated the family-tree renderer so when two or more direct parent/child relationships point to the same child, the parent lines join on a shared horizontal connector before one line continues to the child. A single-parent relationship keeps its existing direct line.
+- Added inline guidance in the relationship form: create one parent/child relationship for each parent to draw the shared connector. Partners alone do not imply parenthood, so the tree never guesses a biological or adoptive parent link.
+- Added an optional second-parent selector to the relationship form. When used with a parent, child, son, or daughter label, both parent links are saved in a single request and the shared connector appears automatically.
+
 ## 2026-11-14 — Frontend styling repair and dashboard navigation
 
 - Fixed the missing production Tailwind utilities: added the pinned Tailwind PostCSS plugin and shared PostCSS configuration, and removed the Turbopack-only loader configuration/dependency. Both development and Webpack production builds now use the same CSS processing setup.

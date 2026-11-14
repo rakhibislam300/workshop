@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { treeCommand } from "@/lib/family-tree";
+import { childKinds, parentalKinds, treeCommand } from "@/lib/family-tree";
 import { familyPermission, photoBucket, rejectCrossOrigin, treeSession } from "@/lib/tree-server";
 const fail = (error: string, status = 400) => Response.json({ error }, { status });
 export async function GET(request: Request) {
@@ -31,11 +31,19 @@ export async function POST(request: Request) {
     ? v.id ? await db.from("tree_people").update(v.person).eq("id", v.id).eq("family_id", v.family_id).select("id").single()
       : await db.from("tree_people").insert({ ...v.person, family_id: v.family_id }).select("id").single()
     : v.action === "delete_person" ? await db.from("tree_people").delete().eq("id", v.id).eq("family_id", v.family_id).select("id").single()
-    : v.action === "add_edge" ? await db.from("tree_edges").insert({ family_id: v.family_id, from_person: v.from_person, to_person: v.to_person, kind: v.kind }).select("id").single()
+    : v.action === "add_edge" ? await db.from("tree_edges").insert([
+      { family_id: v.family_id, from_person: v.from_person, to_person: v.to_person, kind: v.kind },
+      ...(v.co_parent ? [(parentalKinds as readonly string[]).includes(v.kind)
+        ? { family_id: v.family_id, from_person: v.co_parent, to_person: v.to_person, kind: "parent" }
+        : (childKinds as readonly string[]).includes(v.kind)
+          ? { family_id: v.family_id, from_person: v.from_person, to_person: v.co_parent, kind: v.kind }
+          : null] : []),
+    ].filter((edge): edge is { family_id: string; from_person: string; to_person: string; kind: string } => edge !== null)).select("id")
     : await db.from("tree_edges").delete().eq("id", v.id).eq("family_id", v.family_id).select("id").single();
   if (result.error) {
     const message = result.error.message;
     return fail(message.includes("ancestry loop") ? "This would create an ancestry loop. Check the parent and child order." : result.error.code === "23505" || message.includes("partnership already") ? "That relationship already exists." : "Could not save. Refresh the tree and check the details.");
   }
-  return Response.json({ id: result.data.id });
+  const saved = Array.isArray(result.data) ? result.data[0] : result.data;
+  return Response.json({ id: saved.id });
 }

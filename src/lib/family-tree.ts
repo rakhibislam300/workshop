@@ -27,7 +27,10 @@ export function isPartnerEdge(edge: TreeEdge) { return (partnerKinds as readonly
 export const treeCommand = z.discriminatedUnion("action", [
   z.object({ action: z.literal("save_person"), family_id: uuid, id: uuid.optional(), person: personInput }),
   z.object({ action: z.literal("delete_person"), family_id: uuid, id: uuid }),
-  z.object({ action: z.literal("add_edge"), family_id: uuid, from_person: uuid, to_person: uuid, kind: z.enum(Object.keys(edgeKinds) as [keyof typeof edgeKinds, ...Array<keyof typeof edgeKinds>]) }).refine(e => e.from_person !== e.to_person, { message: "Choose two different people." }),
+  z.object({ action: z.literal("add_edge"), family_id: uuid, from_person: uuid, to_person: uuid, co_parent: uuid.nullable().optional(), kind: z.enum(Object.keys(edgeKinds) as [keyof typeof edgeKinds, ...Array<keyof typeof edgeKinds>]) })
+    .refine(e => e.from_person !== e.to_person, { message: "Choose two different people." })
+    .refine(e => !e.co_parent || (e.co_parent !== e.from_person && e.co_parent !== e.to_person), { message: "Choose a different second parent." })
+    .refine(e => !e.co_parent || [...parentalKinds, ...childKinds].includes(e.kind as never), { message: "A second parent can only be used with a parent or child relationship." }),
   z.object({ action: z.literal("delete_edge"), family_id: uuid, id: uuid }),
 ]);
 export const relationLabels = {
