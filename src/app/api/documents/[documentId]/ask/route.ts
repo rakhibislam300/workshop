@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { answerDocumentQuestion } from "@/lib/document-intelligence";
+import { geminiAvailable } from "@/lib/gemini";
 import { createClient } from "@/lib/supabase/server";
 import { documentQuestionInput } from "@/lib/validation";
 
@@ -12,7 +13,7 @@ export async function POST(request: Request, context: AskContext) {
   const supabase = await createClient();
   const { data: claims, error: authError } = await supabase.auth.getClaims();
   if (authError || !claims?.claims?.sub) return NextResponse.json({ error: "Sign in to ask about a document." }, { status: 401 });
-  if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: "Document Q&A is unavailable because no server-side OPENAI_API_KEY is configured." }, { status: 503 });
+  if (!geminiAvailable()) return NextResponse.json({ error: "Document Q&A is unavailable because no server-side GEMINI_API_KEY is configured." }, { status: 503 });
   const { data: document, error: documentError } = await supabase.from("documents").select("id,title").eq("id", documentId).maybeSingle();
   if (documentError || !document) return NextResponse.json({ error: "That document is unavailable." }, { status: 404 });
   const { data: intelligence, error: intelligenceError } = await supabase.from("document_intelligence").select("status,extracted_text,summary").eq("document_id", documentId).maybeSingle();

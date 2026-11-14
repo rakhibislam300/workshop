@@ -8,6 +8,14 @@ This is the single running record of meaningful application changes, security de
 - **Deployment status:** intentionally deferred; no Vercel deployment should be attempted until local Supabase acceptance tests pass.
 - **Current start command:** `npm run dev` after creating `.env.local` from `.env.example` and applying the Supabase migration.
 
+## 2026-11-14 — Gemini AI provider migration
+
+- Replaced the prior OpenAI-specific server integration with a single server-only Gemini adapter. Jibon AI now reads `GEMINI_API_KEY` and optional `GEMINI_MODEL` (default: `gemini-2.5-flash`) only on the Next.js server; neither value is exposed to browser code.
+- Migrated AI Smart Add, contextual family assistant, finance summaries, shopping suggestions, document analysis/OCR, and document Q&A to Gemini. Existing authenticated route checks, family-scoped reads, Zod validation, rate limits, bounded prompts, and explicit user confirmation before every mutation remain in place.
+- The family assistant now asks Gemini for a JSON answer-or-proposal envelope instead of permitting provider tool execution. The application validates the proposal and still requires the existing separate confirmation route to write data.
+- Updated `.env.example` and the local setup/acceptance instructions to use Gemini. The revoked key shared earlier was never written to any repository file.
+- Verified `npm run typecheck` and `npm run lint`; production compilation and a configured-key live request remain pending in this entry.
+
 ## 2026-11-14 — Dashboard focus, family-tree correction, and collaboration email delivery
 
 - Grouped navigation around Today, Home, Money, Family, and Assist; added a global **Add** menu that takes a signed-in person directly to the working task, bill, appointment, or household-profile form.

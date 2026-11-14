@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { analyzeDocumentSource, documentIntelligenceAvailable } from "@/lib/document-intelligence";
+import { geminiModel } from "@/lib/gemini";
 
 type IntelligenceJob = { document_id: string; status: "queued" | "processing"; attempts: number; updated_at: string };
 
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
       const { error: saveError } = await admin.from("document_intelligence").update({
         status: "ready", extracted_text: analysis.extracted_text, summary: analysis.summary,
         metadata: { document_type: analysis.document_type, issuer: analysis.issuer, important_dates: analysis.important_dates, confidence: analysis.confidence },
-        expiry_date: analysis.expiry_date, processor_model: process.env.OPENAI_MODEL || "gpt-4.1-mini", error_message: null, processed_at: new Date().toISOString(), next_attempt_at: new Date().toISOString(),
+        expiry_date: analysis.expiry_date, processor_model: geminiModel(), error_message: null, processed_at: new Date().toISOString(), next_attempt_at: new Date().toISOString(),
       }).eq("document_id", candidate.document_id);
       if (saveError) throw new Error("The extracted document data could not be saved.");
     } catch (reason) {
