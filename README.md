@@ -83,7 +83,7 @@ The collaboration migration must be applied after the two original migrations:
 13. [`20261113197000_add_profile_locale.sql`](supabase/migrations/20261113197000_add_profile_locale.sql)
 14. [`20261113198000_add_missing_foreign_key_indexes.sql`](supabase/migrations/20261113198000_add_missing_foreign_key_indexes.sql)
 
-An owner or admin creates an invite link in the dashboard, shares it only with the invited email address, and the recipient signs in with that exact address before accepting. Owners can manage collaborator roles and removal; the database protects the final owner.
+An owner or admin creates an invite link in the dashboard, shares it only with the invited email address, and the recipient signs in with that exact address before accepting. Recipients can also open **Family → Invitations** to review and accept pending household invitations in-app after applying [`20261114142107_family_invitation_inbox.sql`](supabase/migrations/20261114142107_family_invitation_inbox.sql). Owners can manage collaborator roles and removal; the database protects the final owner.
 
 ### Optional collaboration email delivery
 

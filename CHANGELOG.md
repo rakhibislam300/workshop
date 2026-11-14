@@ -2,6 +2,12 @@
 
 This is the single running record of meaningful application changes, security decisions, verification, and known setup gaps.
 
+## 2026-11-14 — Recipient household invitation inbox
+
+- Added an **Invitations** destination under the dashboard Family navigation. A signed-in person can now see pending household invitations addressed to their exact account email and accept one directly from the app.
+- Added `20261114142107_family_invitation_inbox.sql`. Its authenticated, fixed-search-path RPCs return only the current account&apos;s pending invitations and recheck the recipient email, invitation state, expiry, and membership write at acceptance time. Invitation tokens, recipient lists, and unrelated family data remain private.
+- Kept the secure invitation-link workflow as a fallback. The new inbox fixes the missing recipient-facing UI; it does not loosen existing owner/admin invitation-management permissions.
+
 ## 2026-11-14 — Dashboard sign-in recovery
 
 - Reworked dashboard workspace loading to fetch memberships and visible families in two explicit, RLS-respecting queries instead of relying on an embedded relation that could be empty during account or invitation transitions.

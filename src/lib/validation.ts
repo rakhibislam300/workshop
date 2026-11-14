@@ -9,6 +9,7 @@ export const familyMemberInput = z.object({ name: z.string().trim().min(1, "Ente
 export const familyCreateInput = z.object({ name: z.string().trim().min(1, "Enter a family name.").max(120) });
 export const familyInvitationInput = z.object({ email: z.string().trim().email("Enter a valid email address.").max(320) });
 export const invitationTokenInput = z.object({ token: z.string().uuid("This invitation link is invalid.") });
+export const invitationIdInput = z.object({ id: z.string().uuid("Choose a valid invitation.") });
 export const collaboratorRoleInput = z.object({ role: z.enum(["owner", "admin", "member"]) });
 export const smartAddResponse = z.object({ kind: z.enum(["task", "bill", "appointment"]).nullable(), proposal: z.record(z.string(), z.unknown()).nullable(), needs_clarification: z.boolean(), questions: z.array(z.string()).max(3) });
 
