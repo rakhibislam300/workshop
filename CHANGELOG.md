@@ -8,6 +8,16 @@ This is the single running record of meaningful application changes, security de
 - **Deployment status:** intentionally deferred; no Vercel deployment should be attempted until local Supabase acceptance tests pass.
 - **Current start command:** `npm run dev` after creating `.env.local` from `.env.example` and applying the Supabase migration.
 
+## 2026-11-14 — Dashboard focus, family-tree correction, and collaboration email delivery
+
+- Grouped navigation around Today, Home, Money, Family, and Assist; added a global **Add** menu that takes a signed-in person directly to the working task, bill, appointment, or household-profile form.
+- Improved the family-tree workspace with a center control, clickable mini-map/overview, per-generation jump controls, and selected-person focus. Existing people can now have connections reviewed, removed, or corrected inside that person&apos;s details rather than through a separate relationship screen.
+- Added and applied `20261114062631_add_collaboration_email_delivery.sql`. It creates a private, RLS-enabled retry queue for household invitation and tree-profile-claim email. Raw invite tokens, recipient emails, and provider errors never reach browser roles.
+- Invitation and profile-claim creation now queue a canonical server-side email when the database delivery queue is available, but always preserve the working secure-link/in-app flow as a fallback. The dashboard displays safe states: queued, sent, failed, or manual-link fallback.
+- Added the protected `POST /api/collaboration/deliver-email` worker. It requires a separate timing-safe secret, uses the existing server-only Resend and Supabase service-role configuration, rechecks that requests are still pending, applies idempotency, retries up to five times with exponential backoff, and cancels delivery for resolved records.
+- Removed the populated Resend-looking value from `.env.example`; the template now contains placeholders only. Added documented local variables for the optional collaboration worker.
+- Ran `npm run typecheck`, `npm run lint`, `npm run build`, and `git diff --check` successfully. Applied the collaboration-email migration to the connected Supabase project. Browser acceptance and real provider delivery remain untested because transactional-email credentials and a signed-in browser session are not available in this run.
+
 ## 2026-11-14 — Family tree and cross-household relationships
 
 - Added a private, household-scoped family tree with people profiles, birth/death years, hometowns, biographies, portrait uploads, parent/adoptive/step-parent/partner edges, generation layout, tree/list views, search, zoom, and responsive empty/loading/error states.

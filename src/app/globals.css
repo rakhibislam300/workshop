@@ -9,6 +9,9 @@
 .workspace-shell { display: grid; grid-template-columns: 13rem minmax(0, 1fr); align-items: start; gap: 2rem; max-width: 1440px; margin: auto; padding: 2rem 1.5rem 4rem; }
 .workspace-nav { position: sticky; top: 7rem; display: flex; flex-direction: column; gap: .35rem; padding: 1rem .75rem; background: #fff; border: 1px solid #dce8e5; border-radius: 1rem; }
 .nav-caption { padding: .5rem .75rem 1rem; color: #647672; font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .14em; }
+.workspace-nav-group { display: grid; gap: .1rem; }
+.workspace-nav-group + .workspace-nav-group { margin-top: .7rem; }
+.nav-group-label { padding: .25rem .75rem; color: #82948e; font-size: .6rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .workspace-nav-item { display: flex; align-items: center; gap: .75rem; padding: .8rem .75rem; border-radius: .7rem; color: #526560; font-size: .875rem; font-weight: 650; text-align: left; white-space: nowrap; transition: background .15s, color .15s; }
 .workspace-nav-item:hover { background: #eff8f5; color: #177c70; }
 .workspace-nav-item[aria-current="page"] { background: #177c70; color: #fff; box-shadow: 0 3px 8px #177c7020; }
@@ -17,7 +20,9 @@
   .workspace-shell { display: block; padding: 1rem 1rem 3rem; }
   .workspace-nav { position: static; flex-direction: row; overflow-x: auto; gap: .35rem; margin-bottom: 1.5rem; padding: .5rem; }
   .workspace-nav-item { flex-shrink: 0; padding: .7rem .85rem; }
-  .nav-caption, .nav-note { display: none; }
+  .nav-caption, .nav-note, .nav-group-label { display: none; }
+  .workspace-nav-group { display: flex; gap: .35rem; }
+  .workspace-nav-group + .workspace-nav-group { margin-top: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }

@@ -50,5 +50,14 @@ export async function POST(request: Request) {
     return fail(message.includes("ancestry loop") ? "This would create an ancestry loop. Check the parent and child order." : result.error.code === "23505" || message.includes("partnership already") ? "That relationship already exists." : "Could not save. Refresh the tree and check the details.");
   }
   const saved = Array.isArray(result.data) ? result.data[0] : result.data;
-  return Response.json({ id: typeof saved === "string" ? saved : saved.id });
+  const id = typeof saved === "string" ? saved : saved.id;
+  let profileEmailDelivery: "queued" | "not_requested" | undefined;
+  if (v.action === "create_person" && v.account_email) {
+    const { data: claim } = await db.from("tree_profile_claims").select("id").eq("person_id", id).eq("status", "pending").maybeSingle();
+    if (claim) {
+      const { error: queueError } = await db.rpc("queue_tree_profile_claim_email", { p_claim_id: claim.id });
+      profileEmailDelivery = queueError ? "not_requested" : "queued";
+    }
+  }
+  return Response.json({ id, profileEmailDelivery });
 }

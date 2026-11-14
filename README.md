@@ -53,7 +53,7 @@ The migration creates `profiles`, `family_members`, `tasks`, `bills`, and `appoi
 | Dashboard and reminders | Implemented | Live Supabase metrics plus derived due-today/overdue alerts and persistent, scheduled in-app reminders. |
 | AI Smart Add | Implemented; configuration-dependent | Protected server route, validation, clarification, preview, and user confirmation are ready; it needs a valid `OPENAI_API_KEY` to make live model calls. |
 | Contextual family assistant | Implemented; configuration-dependent | Reads only active-family records under RLS, answers/summarizes/conflict-checks, creates Zod-validated proposals through a bounded model tool, and saves only after a separate permission-checked confirmation. |
-| Family collaboration | Implemented | Family workspaces, roles, switching, shared records, secure invitation acceptance, and activity history. |
+| Family collaboration | Implemented; email delivery configuration-dependent | Family workspaces, roles, switching, shared records, secure invitation acceptance, activity history, and durable server-only invitation/profile-claim delivery queues. |
 | Private document vault | Implemented | Private Supabase Storage, validated PDF/JPG/PNG/text upload, categories, private/family sharing, secure temporary previews/downloads, search, and source-file deletion. |
 | Document intelligence | Implemented; configuration-dependent | Durable private processing queue, text/PDF/image extraction, OCR, summaries, metadata/expiry detection, and permission-aware Q&A are ready; the worker needs server-only credentials. |
 | Financial intelligence | Implemented; AI summary configuration-dependent | Exact INR income/expense records, categories, budgets, recurring bills, subscriptions, analytics, CSV export, and an authorized server-only AI summary route. |
@@ -83,7 +83,26 @@ The collaboration migration must be applied after the two original migrations:
 13. [`20261113197000_add_profile_locale.sql`](supabase/migrations/20261113197000_add_profile_locale.sql)
 14. [`20261113198000_add_missing_foreign_key_indexes.sql`](supabase/migrations/20261113198000_add_missing_foreign_key_indexes.sql)
 
-An owner or admin creates an invite link in the dashboard, shares it only with the invited email address, and the recipient signs in with that exact address before accepting. Owners can manage collaborator roles and removal; the database protects the final owner. Jibon intentionally does not send email itself yet because no transactional email provider has been configured.
+An owner or admin creates an invite link in the dashboard, shares it only with the invited email address, and the recipient signs in with that exact address before accepting. Owners can manage collaborator roles and removal; the database protects the final owner.
+
+### Optional collaboration email delivery
+
+Migration [`20261114062631_add_collaboration_email_delivery.sql`](supabase/migrations/20261114062631_add_collaboration_email_delivery.sql) adds a private retry queue for household invitations and family-tree profile claims. The browser can read only delivery labels such as **Email queued** or **Email sent**; email addresses and raw invitation tokens stay in the RLS-protected server queue. Links continue to be shown as a manual fallback when delivery has not been configured.
+
+For local delivery, configure these server-only values in `.env.local` and trigger the worker from a trusted terminal or scheduler:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=...
+RESEND_API_KEY=...
+REMINDER_FROM_EMAIL="Jibon AI <hello@example.com>"
+APP_URL=http://localhost:3000
+COLLABORATION_EMAIL_WORKER_SECRET=use-a-long-random-secret
+
+curl -X POST http://localhost:3000/api/collaboration/deliver-email \
+  -H "x-collaboration-email-worker-secret: $COLLABORATION_EMAIL_WORKER_SECRET"
+```
+
+The worker sends at most 20 due messages per request, uses each queue ID as its provider idempotency key, retries transient errors up to five times with exponential backoff, and cancels stale/accepted/declined requests before sending. No email is sent until these values are set; in-app acceptance and manual link sharing continue to work.
 
 ## Phase 2 contextual text AI
 
