@@ -15,7 +15,7 @@ function authorized(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!documentIntelligenceAvailable()) return NextResponse.json({ error: "Document intelligence is not configured. Add the server-only worker secret, service-role key, and OpenAI key." }, { status: 503 });
+  if (!documentIntelligenceAvailable()) return NextResponse.json({ error: "Document intelligence is not configured. Add the server-only worker secret, service-role key, and GEMINI_API_KEY." }, { status: 503 });
   if (!authorized(request)) return NextResponse.json({ error: "Unauthorized document processor." }, { status: 401 });
   const admin = createAdminClient();
   const now = new Date(); const staleBefore = new Date(now.getTime() - 10 * 60 * 1000).toISOString();

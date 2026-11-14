@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { rejectCrossOrigin } from "@/lib/tree-server";
 
 type NotificationContext = { params: Promise<{ notificationId: string }> };
 const statusInput = z.object({ read: z.boolean() });
 
 export async function PATCH(request: Request, context: NotificationContext) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const { notificationId } = await context.params;
   const body = await request.json().catch(() => null); const input = statusInput.safeParse(body);
   if (!input.success) return NextResponse.json({ error: "Enter a valid notification state." }, { status: 400 });

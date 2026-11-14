@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { collaboratorRoleInput } from "@/lib/validation";
+import { rejectCrossOrigin } from "@/lib/tree-server";
 
 type CollaboratorMutationContext = { params: Promise<{ familyId: string; userId: string }> };
 
 export async function PATCH(request: Request, ctx: CollaboratorMutationContext) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const { familyId, userId } = await ctx.params;
   const body = await request.json().catch(() => null);
   const parsed = collaboratorRoleInput.safeParse(body);
@@ -17,7 +19,8 @@ export async function PATCH(request: Request, ctx: CollaboratorMutationContext) 
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(_request: Request, ctx: CollaboratorMutationContext) {
+export async function DELETE(request: Request, ctx: CollaboratorMutationContext) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const { familyId, userId } = await ctx.params;
   const supabase = await createClient();
   const { data: claims, error: authError } = await supabase.auth.getClaims();

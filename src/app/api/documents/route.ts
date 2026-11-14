@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { documentListInput, documentUploadInput } from "@/lib/validation";
 import { documentIntelligenceAvailable } from "@/lib/document-intelligence";
+import { rejectCrossOrigin } from "@/lib/tree-server";
 
 const bucket = "family-documents";
 const allowedTypes = new Set(["application/pdf", "image/jpeg", "image/png", "text/plain"]);
@@ -49,6 +50,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const form = await request.formData().catch(() => null);
   const rawFile = form?.get("file");
   const input = documentUploadInput.safeParse({

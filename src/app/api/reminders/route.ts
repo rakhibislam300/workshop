@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { notificationPreferenceInput, reminderScheduleInput } from "@/lib/validation";
 import { emailReminderAvailable } from "@/lib/reminder-email";
+import { rejectCrossOrigin } from "@/lib/tree-server";
 
 const familyQuery = z.string().uuid();
 
@@ -35,6 +36,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const body = await request.json().catch(() => null);
   const input = reminderScheduleInput.safeParse(body);
   if (!input.success) return NextResponse.json({ error: input.error.issues[0]?.message ?? "Enter valid reminder details." }, { status: 400 });
@@ -59,6 +61,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const body = await request.json().catch(() => null);
   const input = notificationPreferenceInput.safeParse(body);
   if (!input.success) return NextResponse.json({ error: input.error.issues[0]?.message ?? "Enter valid notification preferences." }, { status: 400 });

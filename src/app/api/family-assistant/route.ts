@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { familyAssistantInput, familyAssistantProposal, familyAssistantProposalToInput } from "@/lib/validation";
 import { geminiAvailable, generateWithGemini, parseGeminiJson } from "@/lib/gemini";
+import { rejectCrossOrigin } from "@/lib/tree-server";
 
 const assistantResponse = z.object({ kind: z.enum(["answer", "proposal"]), message: z.string().trim().min(1).max(2400), proposal: familyAssistantProposal.nullable() });
 
@@ -17,6 +18,7 @@ function findScheduleConflicts(appointments: { id: string; title: string; appoin
 }
 
 export async function POST(request: Request) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const supabase = await createClient();
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
   const userId = claimsData?.claims?.sub;

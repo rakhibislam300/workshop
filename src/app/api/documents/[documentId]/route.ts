@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rejectCrossOrigin } from "@/lib/tree-server";
 
 type DocumentContext = { params: Promise<{ documentId: string }> };
 
-export async function DELETE(_request: Request, context: DocumentContext) {
+export async function DELETE(request: Request, context: DocumentContext) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const { documentId } = await context.params;
   const supabase = await createClient();
   const { data: claims, error: authError } = await supabase.auth.getClaims();

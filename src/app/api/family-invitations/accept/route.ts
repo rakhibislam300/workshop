@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { invitationTokenInput } from "@/lib/validation";
+import { rejectCrossOrigin } from "@/lib/tree-server";
 
 export async function POST(request: Request) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const body = await request.json().catch(() => null);
   const parsed = invitationTokenInput.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });

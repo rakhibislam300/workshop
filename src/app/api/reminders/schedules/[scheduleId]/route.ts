@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { rejectCrossOrigin } from "@/lib/tree-server";
 
 type ScheduleContext = { params: Promise<{ scheduleId: string }> };
 const toggleInput = z.object({ is_enabled: z.boolean() });
@@ -12,6 +13,7 @@ async function clientForReminder() {
 }
 
 export async function PATCH(request: Request, context: ScheduleContext) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const { scheduleId } = await context.params;
   const body = await request.json().catch(() => null); const input = toggleInput.safeParse(body);
   if (!input.success) return NextResponse.json({ error: "Enter a valid reminder state." }, { status: 400 });
@@ -23,7 +25,8 @@ export async function PATCH(request: Request, context: ScheduleContext) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(_request: Request, context: ScheduleContext) {
+export async function DELETE(request: Request, context: ScheduleContext) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const { scheduleId } = await context.params;
   const { supabase, userId } = await clientForReminder();
   if (!userId) return NextResponse.json({ error: "Sign in to remove a reminder." }, { status: 401 });

@@ -16,6 +16,17 @@ This is the single running record of meaningful application changes, security de
 - Updated `.env.example` and the local setup/acceptance instructions to use Gemini. The revoked key shared earlier was never written to any repository file.
 - Verified `npm run typecheck` and `npm run lint`; production compilation and a configured-key live request remain pending in this entry.
 
+### Security hardening follow-up
+
+- Applied a shared same-origin guard to every browser-triggered route that creates, changes, deletes, or triggers paid AI processing for protected household data: family management, invitation acceptance, reminders, documents, Smart Add, family assistant, finance summaries, shopping suggestions, and profile operations.
+- Background email/document workers remain callable only with their separate server secrets, so local/scheduled processing is unaffected. This closes cross-site request attempts before a session-backed Supabase client is used.
+- Replaced a raw provider-error response from document Q&A with a safe retry message. Rechecked every mutation route: browser routes use the origin guard, and the document worker uses its dedicated secret.
+
+### Header workflow polish
+
+- Replaced browser prompt dialogs for creating a family workspace and inviting a collaborator with accessible in-app modal forms.
+- The invitation form now keeps a selectable secure fallback link in the same flow and explains the recipient&apos;s exact-email sign-in requirement. No functional invitation or family-switching behavior changed.
+
 ## 2026-11-14 — Dashboard focus, family-tree correction, and collaboration email delivery
 
 - Grouped navigation around Today, Home, Money, Family, and Assist; added a global **Add** menu that takes a signed-in person directly to the working task, bill, appointment, or household-profile form.

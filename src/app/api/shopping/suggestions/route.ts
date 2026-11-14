@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { shoppingSuggestionInput, shoppingSuggestions } from "@/lib/validation";
 import { geminiAvailable, generateWithGemini, parseGeminiJson } from "@/lib/gemini";
+import { rejectCrossOrigin } from "@/lib/tree-server";
 
 function parseSuggestions(text: string) { return shoppingSuggestions.safeParse(parseGeminiJson(text)); }
 
 export async function POST(request: Request) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const input = shoppingSuggestionInput.safeParse(await request.json().catch(() => null));
   if (!input.success) return NextResponse.json({ error: "Choose a valid family shopping list." }, { status: 400 });
   const supabase = await createClient(); const { data: claims, error: authError } = await supabase.auth.getClaims(); const userId = claims?.claims?.sub;

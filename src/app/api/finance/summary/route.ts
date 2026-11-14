@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { financeMonthInput } from "@/lib/validation";
 import { geminiAvailable, generateWithGemini } from "@/lib/gemini";
+import { rejectCrossOrigin } from "@/lib/tree-server";
 
 function nextMonth(month: string) { const [year, value] = month.split("-").map(Number); return `${value === 12 ? year + 1 : year}-${String(value === 12 ? 1 : value + 1).padStart(2, "0")}-01`; }
 export async function POST(request: Request) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const input = financeMonthInput.safeParse(await request.json().catch(() => null));
   if (!input.success) return NextResponse.json({ error: "Choose a valid family and month." }, { status: 400 });
   const supabase = await createClient(); const { data: claims, error: authError } = await supabase.auth.getClaims(); const userId = claims?.claims?.sub;

@@ -3,10 +3,12 @@ import { answerDocumentQuestion } from "@/lib/document-intelligence";
 import { geminiAvailable } from "@/lib/gemini";
 import { createClient } from "@/lib/supabase/server";
 import { documentQuestionInput } from "@/lib/validation";
+import { rejectCrossOrigin } from "@/lib/tree-server";
 
 type AskContext = { params: Promise<{ documentId: string }> };
 
 export async function POST(request: Request, context: AskContext) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const { documentId } = await context.params;
   const input = documentQuestionInput.safeParse(await request.json().catch(() => null));
   if (!input.success) return NextResponse.json({ error: input.error.issues[0]?.message ?? "Enter a valid document question." }, { status: 400 });
@@ -21,7 +23,7 @@ export async function POST(request: Request, context: AskContext) {
   try {
     const answer = await answerDocumentQuestion({ title: document.title, text: intelligence.extracted_text, summary: intelligence.summary, question: input.data.question });
     return NextResponse.json({ answer });
-  } catch (reason) {
-    return NextResponse.json({ error: reason instanceof Error ? reason.message : "Document Q&A is temporarily unavailable." }, { status: 502 });
+  } catch {
+    return NextResponse.json({ error: "Document Q&A is temporarily unavailable. Please retry or use the document details." }, { status: 502 });
   }
 }

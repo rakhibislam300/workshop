@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { appointmentInput, billInput, smartAddResponse, taskInput } from "@/lib/validation";
 import { geminiAvailable, generateWithGemini, parseGeminiJson } from "@/lib/gemini";
+import { rejectCrossOrigin } from "@/lib/tree-server";
 
 const schemaGuide = `Return ONLY JSON with: {"kind":"task"|"bill"|"appointment"|null,"proposal":object|null,"needs_clarification":boolean,"questions":string[]}. Today's date is ${new Date().toISOString().slice(0,10)}. Date-only fields must be YYYY-MM-DD. appointment_at must be ISO 8601 with timezone. A task needs title and priority (default medium); bill needs title, amount, category (default Other), due_date; appointment needs title and appointment_at. If an essential field or date interpretation is ambiguous, return kind if known, proposal with known values, needs_clarification true, and a short question. Do not invent dates, amounts, or times.`;
 
 export async function POST(request: Request) {
+  if (rejectCrossOrigin(request)) return NextResponse.json({ error: "Request origin denied." }, { status: 403 });
   const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Sign in to use Smart Add." }, { status: 401 });
   if (!geminiAvailable()) return NextResponse.json({ error: "AI Smart Add is unavailable because no server-side GEMINI_API_KEY is configured." }, { status: 503 });
