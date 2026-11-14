@@ -18,6 +18,7 @@ export const edgeKinds = {
 export const parentalKinds = ["parent", "father", "mother", "adoptive_parent", "step_parent", "guardian"] as const;
 export const childKinds = ["child", "son", "daughter"] as const;
 export const partnerKinds = ["partner", "spouse", "husband", "wife"] as const;
+const sameGenerationKinds = ["partner", "spouse", "husband", "wife", "sibling", "brother", "sister", "cousin"] as const;
 export function relationshipEnds(edge: TreeEdge) {
   if ((parentalKinds as readonly string[]).includes(edge.kind)) return { parent: edge.from_person, child: edge.to_person };
   if ((childKinds as readonly string[]).includes(edge.kind)) return { parent: edge.to_person, child: edge.from_person };
@@ -62,24 +63,74 @@ export type TreePerson = z.infer<typeof personInput> & { id: string; family_id: 
 export type TreeEdge = { id: string; from_person: string; to_person: string; kind: keyof typeof edgeKinds };
 export type RelativeConnection = { id: string; sender_id: string; recipient_id: string | null; recipient_email: string; sender_name: string; recipient_name: string | null; relationship: Relation; status: string; expires_at: string };
 
-// Direct parent/child labels determine generations. Other labels stay visible as relationships without inventing ancestry.
+// Layout parent groups first, then place each child one generation lower. Partners,
+// siblings, cousins, and co-parents stay on one horizontal generation line.
 export function treeLayout(people: TreePerson[], edges: TreeEdge[]) {
-  const levels = new Map<string, number>();
-  const parents = new Map<string, string[]>();
-  for (const e of edges) { const ends = relationshipEnds(e); if (ends) parents.set(ends.child, [...(parents.get(ends.child) ?? []), ends.parent]); }
-  function level(id: string, seen = new Set<string>()): number {
-    if (levels.has(id)) return levels.get(id)!;
-    if (seen.has(id)) return 0;
-    const next = new Set(seen).add(id);
-    const value = Math.max(0, ...(parents.get(id) ?? []).map(p => level(p, next) + 1));
-    levels.set(id, value); return value;
+  const index = new Map(people.map((person, position) => [person.id, position]));
+  const parent = new Map(people.map(person => [person.id, person.id]));
+  function root(id: string): string {
+    const current = parent.get(id) ?? id;
+    if (current === id) return id;
+    const resolved = root(current); parent.set(id, resolved); return resolved;
   }
-  people.forEach(p => level(p.id));
-  const rows: TreePerson[][] = [];
-  for (const p of people) (rows[levels.get(p.id)!] ??= []).push(p);
+  function join(left: string, right: string) {
+    const a = root(left); const b = root(right);
+    if (a !== b) parent.set(b, a);
+  }
+  for (const edge of edges) if ((sameGenerationKinds as readonly string[]).includes(edge.kind)) join(edge.from_person, edge.to_person);
+  const directParents = new Map<string, string[]>();
+  for (const edge of edges) {
+    const ends = relationshipEnds(edge);
+    if (ends) directParents.set(ends.child, [...(directParents.get(ends.child) ?? []), ends.parent]);
+  }
+  // A child with two recorded parents should always have both parents on one row,
+  // even where only one parent currently has older relatives in the tree.
+  for (const parents of directParents.values()) parents.slice(1).forEach(other => join(parents[0], other));
+
+  const components = new Map<string, string[]>();
+  for (const person of people) { const component = root(person.id); components.set(component, [...(components.get(component) ?? []), person.id]); }
+  const parentsByComponent = new Map<string, Set<string>>();
+  const childrenByComponent = new Map<string, Set<string>>();
+  for (const [childId, parentIds] of directParents) {
+    const child = root(childId);
+    for (const parentId of parentIds) {
+      const ancestor = root(parentId);
+      if (ancestor === child) continue;
+      parentsByComponent.set(child, new Set([...(parentsByComponent.get(child) ?? []), ancestor]));
+      childrenByComponent.set(ancestor, new Set([...(childrenByComponent.get(ancestor) ?? []), child]));
+    }
+  }
+  const levels = new Map<string, number>();
+  function level(component: string, seen = new Set<string>()): number {
+    if (levels.has(component)) return levels.get(component)!;
+    if (seen.has(component)) return 0;
+    const next = new Set(seen).add(component);
+    const value = Math.max(0, ...[...(parentsByComponent.get(component) ?? [])].map(ancestor => level(ancestor, next) + 1));
+    levels.set(component, value); return value;
+  }
+  for (const component of components.keys()) level(component);
+  const componentRows: string[][] = [];
+  for (const component of components.keys()) (componentRows[levels.get(component)!] ??= []).push(component);
+  const baseOrder = (component: string) => Math.min(...(components.get(component) ?? []).map(id => index.get(id) ?? 0));
+  componentRows.forEach(row => row.sort((a, b) => baseOrder(a) - baseOrder(b)));
+  // Short barycentric passes keep parents above their children and reduce crossed connectors.
+  for (let pass = 0; pass < 3; pass += 1) {
+    for (let rowIndex = 1; rowIndex < componentRows.length; rowIndex += 1) {
+      const previousPositions = new Map(componentRows[rowIndex - 1].map((component, position) => [component, position]));
+      componentRows[rowIndex].sort((a, b) => average([...parentsByComponent.get(a) ?? []].map(parentId => previousPositions.get(parentId)).filter((value): value is number => value !== undefined), baseOrder(a)) - average([...parentsByComponent.get(b) ?? []].map(parentId => previousPositions.get(parentId)).filter((value): value is number => value !== undefined), baseOrder(b)));
+    }
+    for (let rowIndex = componentRows.length - 2; rowIndex >= 0; rowIndex -= 1) {
+      const nextPositions = new Map(componentRows[rowIndex + 1].map((component, position) => [component, position]));
+      componentRows[rowIndex].sort((a, b) => average([...childrenByComponent.get(a) ?? []].map(childId => nextPositions.get(childId)).filter((value): value is number => value !== undefined), baseOrder(a)) - average([...childrenByComponent.get(b) ?? []].map(childId => nextPositions.get(childId)).filter((value): value is number => value !== undefined), baseOrder(b)));
+    }
+  }
+  const byId = new Map(people.map(person => [person.id, person]));
+  const rows = componentRows.map(row => row.flatMap(component => (components.get(component) ?? []).sort((a, b) => (index.get(a) ?? 0) - (index.get(b) ?? 0)).map(id => byId.get(id)!)));
   const columns = Math.max(1, ...rows.map(r => r.length));
-  const width = Math.max(620, columns * 210 + 40);
+  const width = Math.max(620, columns * 220 + 60);
   const positions = new Map<string, { x: number; y: number }>();
-  rows.forEach((row, rowIndex) => row.forEach((p, i) => positions.set(p.id, { x: (width - row.length * 210) / 2 + i * 210, y: 48 + rowIndex * 220 })));
+  rows.forEach((row, rowIndex) => row.forEach((p, i) => positions.set(p.id, { x: (width - row.length * 220) / 2 + i * 220, y: 48 + rowIndex * 220 })));
   return { rows, positions, width, height: Math.max(270, rows.length * 220 + 40) };
 }
+
+function average(values: number[], fallback: number) { return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : fallback; }

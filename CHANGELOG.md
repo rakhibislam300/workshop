@@ -38,6 +38,11 @@ This is the single running record of meaningful application changes, security de
 - Kept relationship edits family-managed. A claimed profile does not grant access to household tasks, bills, documents, other tree people, or relationship lines. This prevents a personal profile correction from changing shared ancestry.
 - Added and applied `20261114055505_add_tree_profile_claims.sql`, plus route-level validation and rollback-based authorization coverage. The Supabase advisor flags the two intentional authenticated-only profile-claim RPCs because they are `SECURITY DEFINER`; both use fixed search paths, require a signed-in actor, and perform in-function owner/recipient authorization.
 
+### Generation alignment follow-up
+
+- Reworked the family-tree layout engine so partners, siblings, cousins, and the recorded co-parents of one child are placed on the same generation row before descendants are positioned.
+- Added layered ordering passes that keep parent groups over their children and reduce crossed or diagonal connectors. A child with two recorded parents now inherits a shared horizontal parent row and one clean downward branch.
+
 ## 2026-11-14 — Frontend styling repair and dashboard navigation
 
 - Fixed the missing production Tailwind utilities: added the pinned Tailwind PostCSS plugin and shared PostCSS configuration, and removed the Turbopack-only loader configuration/dependency. Both development and Webpack production builds now use the same CSS processing setup.
