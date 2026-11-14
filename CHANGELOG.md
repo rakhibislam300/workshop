@@ -31,6 +31,13 @@ This is the single running record of meaningful application changes, security de
 - Added inline guidance in the relationship form: create one parent/child relationship for each parent to draw the shared connector. Partners alone do not imply parenthood, so the tree never guesses a biological or adoptive parent link.
 - Added an optional second-parent selector to the relationship form. When used with a parent, child, son, or daughter label, both parent links are saved in a single request and the shared connector appears automatically.
 
+### Member-first family profile follow-up
+
+- Removed the separate family-relationship editor. The Add family member form now captures identity details, an initial relationship, optional second parent, and an optional verified Jibon account email in one submission.
+- Added accepted profile claims. A family can request a person&apos;s own Jibon account to manage their profile; the recipient must accept after signing in before they can change their name, years, hometown, story, or profile photo. Their corrections update the shared tree record.
+- Kept relationship edits family-managed. A claimed profile does not grant access to household tasks, bills, documents, other tree people, or relationship lines. This prevents a personal profile correction from changing shared ancestry.
+- Added and applied `20261114055505_add_tree_profile_claims.sql`, plus route-level validation and rollback-based authorization coverage. The Supabase advisor flags the two intentional authenticated-only profile-claim RPCs because they are `SECURITY DEFINER`; both use fixed search paths, require a signed-in actor, and perform in-function owner/recipient authorization.
+
 ## 2026-11-14 — Frontend styling repair and dashboard navigation
 
 - Fixed the missing production Tailwind utilities: added the pinned Tailwind PostCSS plugin and shared PostCSS configuration, and removed the Turbopack-only loader configuration/dependency. Both development and Webpack production builds now use the same CSS processing setup.

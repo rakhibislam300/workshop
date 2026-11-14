@@ -7,8 +7,9 @@ async function access(context: Context, edit: boolean) {
   if (!userId) return { response: fail("Sign in first.", 401) };
   const { personId } = await context.params;
   if (!z.string().uuid().safeParse(personId).success) return { response: fail("Invalid person.", 400) };
-  const { data } = await db.from("tree_people").select("family_id").eq("id", personId).maybeSingle();
-  if (!data || !await familyPermission(db, data.family_id, userId, edit)) return { response: fail("Photo unavailable.", 404) };
+  const { data } = await db.from("tree_people").select("family_id,linked_user_id").eq("id", personId).maybeSingle();
+  const ownsProfile = data?.linked_user_id === userId;
+  if (!data || (!ownsProfile && !await familyPermission(db, data.family_id, userId, edit))) return { response: fail("Photo unavailable.", 404) };
   return { db, path: `${data.family_id}/${personId}` };
 }
 export async function GET(_request: Request, context: Context) {

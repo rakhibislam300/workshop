@@ -27,7 +27,12 @@ export async function POST(request: Request) {
     const { error } = await db.storage.from(photoBucket).remove([`${v.family_id}/${v.id}`]);
     if (error) return fail("Could not remove the photo. Person was kept; please retry.", 502);
   }
-  const result = v.action === "save_person"
+  const result = v.action === "create_person" ? await db.rpc("create_tree_person", {
+      p_family_id: v.family_id, p_name: v.person.name, p_birth_year: v.person.birth_year, p_death_year: v.person.death_year,
+      p_biography: v.person.biography, p_birthplace: v.person.birthplace, p_related_to: v.related_to ?? null,
+      p_relationship: v.relationship ?? null, p_co_parent: v.co_parent ?? null, p_account_email: v.account_email ?? null,
+    })
+    : v.action === "save_person"
     ? v.id ? await db.from("tree_people").update(v.person).eq("id", v.id).eq("family_id", v.family_id).select("id").single()
       : await db.from("tree_people").insert({ ...v.person, family_id: v.family_id }).select("id").single()
     : v.action === "delete_person" ? await db.from("tree_people").delete().eq("id", v.id).eq("family_id", v.family_id).select("id").single()
@@ -45,5 +50,5 @@ export async function POST(request: Request) {
     return fail(message.includes("ancestry loop") ? "This would create an ancestry loop. Check the parent and child order." : result.error.code === "23505" || message.includes("partnership already") ? "That relationship already exists." : "Could not save. Refresh the tree and check the details.");
   }
   const saved = Array.isArray(result.data) ? result.data[0] : result.data;
-  return Response.json({ id: saved.id });
+  return Response.json({ id: typeof saved === "string" ? saved : saved.id });
 }

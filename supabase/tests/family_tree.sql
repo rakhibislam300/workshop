@@ -77,3 +77,29 @@ begin
 end $$;
 rollback;
 select 'PASS: tree CRUD, cycle rejection, owner/admin/member roles, cross-family isolation, invitation consent, block, no membership escalation; fixtures rolled back' as result;
+
+-- Account-linked profile: acceptance permits detail edits only, never edge edits.
+begin;
+do $$
+declare
+  owner_id uuid:=gen_random_uuid(); member_id uuid:=gen_random_uuid(); family_id uuid:=gen_random_uuid(); parent_id uuid:=gen_random_uuid(); created_person_id uuid; created_claim_id uuid; denied boolean:=false;
+  owner_email text:=owner_id::text||'@example.invalid'; member_email text:=member_id::text||'@example.invalid';
+begin
+  insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values (owner_id,owner_email,now(),'{}'),(member_id,member_email,now(),'{}');
+  insert into public.families(id,name,created_by) values(family_id,'Profile claim verification',owner_id);
+  insert into public.family_memberships(family_id,user_id,role) values(family_id,owner_id,'owner');
+  perform set_config('role','authenticated',true); perform set_config('request.jwt.claim.sub',owner_id::text,true);
+  insert into public.tree_people(id,family_id,name) values(parent_id,family_id,'Parent');
+  created_person_id:=public.create_tree_person(family_id,'Linked child',2010,null,'Original story','Home',parent_id,'son',null,member_email);
+  select claim.id into created_claim_id from public.tree_profile_claims claim where claim.person_id=created_person_id;
+  perform set_config('request.jwt.claim.sub',member_id::text,true);
+  assert (select count(*)=1 from public.tree_people person where person.id=created_person_id),'Recipient cannot preview pending profile';
+  perform public.respond_tree_profile_claim(created_claim_id,'accept');
+  update public.tree_people set biography='Corrected by account holder' where id=created_person_id;
+  assert (select biography='Corrected by account holder' and linked_user_id=member_id from public.tree_people person where person.id=created_person_id),'Accepted member could not update own profile';
+  begin insert into public.tree_edges(family_id,from_person,to_person,kind) values(family_id,created_person_id,parent_id,'son'); exception when insufficient_privilege then denied:=true; end;
+  assert denied,'Claimed member must not be able to rewrite family relationships';
+  perform set_config('role','postgres',true);
+end $$;
+rollback;
+select 'PASS: accepted profile claim permits personal details only' as result;
