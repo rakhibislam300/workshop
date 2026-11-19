@@ -28,23 +28,33 @@ export function FamilyManagement({ familyId, role, userId }: { familyId: string;
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const canInvite = role === "owner" || role === "admin";
   const isOwner = role === "owner";
 
   const load = useCallback(async () => {
+    setLoading(true); setLoadFailed(false);
+    try {
     const collaboratorResponse = await fetch(`/api/families/${familyId}/collaborators`);
     const collaboratorPayload = await collaboratorResponse.json();
-    if (collaboratorResponse.ok) setCollaborators(collaboratorPayload.collaborators || []);
+    if (!collaboratorResponse.ok) throw new Error(collaboratorPayload.error || "Could not load household members.");
+    setCollaborators(collaboratorPayload.collaborators || []);
     if (canInvite) {
       const inviteResponse = await fetch(`/api/families/${familyId}/invitations`, { cache: "no-store" });
       const invitePayload = await inviteResponse.json();
-      if (inviteResponse.ok) {
-        const profiles = invitePayload.myTreeProfiles || [];
+      if (!inviteResponse.ok) throw new Error(invitePayload.error || "Could not load household invitations.");
+      {
+        const profiles: TreeProfile[] = invitePayload.myTreeProfiles || [];
         setInvitations(invitePayload.invitations || []);
         setMyTreeProfiles(profiles);
-        setInviterTreePersonId(current => current || profiles[0]?.id || "");
+        setInviterTreePersonId(current => profiles.some(profile => profile.id === current) ? current : profiles[0]?.id || "");
       }
     }
+    } catch (reason) {
+      setLoadFailed(true);
+      setError(reason instanceof Error ? reason.message : "Could not load household invitations. Please retry.");
+    } finally { setLoading(false); }
   }, [familyId, canInvite]);
 
   useEffect(() => {
@@ -110,7 +120,9 @@ export function FamilyManagement({ familyId, role, userId }: { familyId: string;
     {error && <p role="alert" className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
     {message && <p role="status" className="mt-3 rounded-lg bg-teal-50 p-3 text-sm text-teal-800">{message}</p>}
     <ul className="mt-4 divide-y divide-slate-100">{collaborators.map((member) => <li key={member.user_id} className="flex flex-wrap items-center justify-between gap-2 py-3"><div><p className="font-semibold text-slate-800">{member.display_name}{member.user_id === userId ? " (you)" : ""}</p><p className="text-xs capitalize text-slate-500">{member.role}</p></div>{isOwner && member.user_id !== userId ? <div className="flex items-center gap-2"><select aria-label={`Role for ${member.display_name}`} className="field w-auto py-1.5 text-sm" value={member.role} disabled={busy} onChange={(event) => void updateRole(member, event.target.value as FamilyRole)}><option value="member">Member</option><option value="admin">Admin</option><option value="owner">Owner</option></select><button aria-label={`Remove ${member.display_name}`} disabled={busy} onClick={() => void remove(member)} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 size={16}/></button></div> : <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold capitalize text-slate-600">{member.role}</span>}</li>)}</ul>
-    {canInvite && <div className="mt-5 rounded-xl border border-teal-100 bg-teal-50/40 p-4">
+    {loading && <p role="status" className="mt-4 text-sm text-slate-500">Loading household invitations…</p>}
+    {loadFailed && <button type="button" className="button-secondary mt-3" disabled={loading} onClick={() => { setError(""); void load(); }}>Try loading again</button>}
+    {canInvite && !loading && !loadFailed && <div className="mt-5 rounded-xl border border-teal-100 bg-teal-50/40 p-4">
       <div className="flex items-start gap-2"><GitBranch className="mt-0.5 shrink-0 text-teal-700" size={18}/><div><h3 className="font-bold text-teal-950">Invite a household member</h3><p className="mt-1 text-sm text-teal-900">Their workspace access and declared relationship are confirmed together. They can correct their personal details after accepting.</p></div></div>
       {!myTreeProfiles.length ? <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Add your own linked profile in <span className="font-semibold">Family tree</span> before sending a relationship-aware invitation. This keeps the connection anchored to you.</p> : <form onSubmit={invite} className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2 flex gap-2 rounded-xl bg-white p-1 text-sm font-bold"><button type="button" onClick={() => setMethod("jibon")} disabled={busy} className={`flex-1 rounded-lg px-3 py-2 ${method === "jibon" ? "bg-teal-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>Jibon ID</button><button type="button" onClick={() => setMethod("email")} disabled={busy} className={`flex-1 rounded-lg px-3 py-2 ${method === "email" ? "bg-teal-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>Email link</button></div>

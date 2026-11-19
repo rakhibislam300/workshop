@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { edgeKinds } from "@/lib/family-tree";
 
-const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
+const date = z.iso.date("Enter a valid calendar date (YYYY-MM-DD).");
 export const taskInput = z.object({ title: z.string().trim().min(1).max(160), description: z.string().trim().max(2000).nullable().optional(), due_date: date.nullable().optional(), priority: z.enum(["low", "medium", "high"]), assigned_member_id: z.string().uuid().nullable().optional() });
-export const billInput = z.object({ title: z.string().trim().min(1).max(160), amount: z.coerce.number().min(0).max(9999999999.99), category: z.string().trim().min(1).max(60), due_date: date, is_paid: z.boolean().default(false) });
+export const billInput = z.object({ title: z.string().trim().min(1).max(160), amount: z.union([z.number(), z.string().trim().min(1, "Enter an amount.")]).pipe(z.coerce.number<string | number>().min(0).max(9999999999.99)), category: z.string().trim().min(1).max(60), due_date: date, is_paid: z.boolean().default(false) });
 export const appointmentInput = z.object({ title: z.string().trim().min(1).max(160), appointment_at: z.string().datetime({ offset: true }), location: z.string().trim().max(300).nullable().optional(), assigned_member_id: z.string().uuid().nullable().optional() });
 export const profileInput = z.object({ display_name: z.string().trim().min(1, "Enter the name you want your household to use.").max(80) });
 export const familyMemberInput = z.object({ name: z.string().trim().min(1, "Enter a household member name.").max(80), relationship: z.string().trim().max(80).nullable().optional() });

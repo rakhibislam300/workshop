@@ -14,10 +14,11 @@ export function FamilyAccessIds({ familyId, role }: { familyId: string; role: Fa
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
   const canReview = role === "owner" || role === "admin";
 
   const load = useCallback(async () => {
-    setError("");
+    setError(""); setLoading(true); setIdentity(null); setRequests([]);
     try {
       const identityResponse = await fetch(`/api/identity?family_id=${encodeURIComponent(familyId)}`, { cache: "no-store" });
       const identityPayload = await identityResponse.json();
@@ -26,9 +27,11 @@ export function FamilyAccessIds({ familyId, role }: { familyId: string; role: Fa
       if (canReview) {
         const requestsResponse = await fetch(`/api/family-join?family_id=${encodeURIComponent(familyId)}`, { cache: "no-store" });
         const requestsPayload = await requestsResponse.json();
-        if (requestsResponse.ok) setRequests(requestsPayload.requests || []);
+        if (!requestsResponse.ok) throw new Error(requestsPayload.error || "Could not load join requests.");
+        setRequests(requestsPayload.requests || []);
       }
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not load access settings."); }
+    } catch (reason) { setIdentity(null); setError(reason instanceof Error ? reason.message : "Could not load access settings."); }
+    finally { setLoading(false); }
   }, [familyId, canReview]);
 
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
@@ -65,7 +68,7 @@ export function FamilyAccessIds({ familyId, role }: { familyId: string; role: Fa
   return <section className="card space-y-5" aria-labelledby="access-ids-heading">
     <div className="flex items-center gap-2"><KeyRound className="text-teal-700" size={20}/><div><p className="eyebrow mb-1">Private access</p><h2 id="access-ids-heading" className="font-extrabold">Jibon IDs & Family Code</h2></div></div>
     {error && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}{message && <p role="status" className="rounded-lg bg-teal-50 p-3 text-sm text-teal-800">{message}</p>}
-    {!identity ? <p className="text-sm text-slate-500">Loading your private access settings…</p> : <><div className="rounded-xl bg-slate-50 p-4"><div className="flex items-start justify-between gap-3"><div><p className="flex items-center gap-2 text-sm font-bold text-slate-800"><UserRound size={16} className="text-teal-700"/>Your Jibon ID</p><p className="mt-1 text-xs text-slate-500">Share this only with a family owner or admin who wants to invite you.</p></div><button type="button" className="button-secondary shrink-0" onClick={() => void copy(identity.jibon_id, "Jibon ID")}><Copy size={15}/> Copy</button></div><code className="mt-3 block rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold tracking-wide text-slate-900">{identity.jibon_id}</code></div>
+    {loading ? <p role="status" className="text-sm text-slate-500">Loading your private access settings…</p> : !identity ? <button type="button" className="button-secondary" onClick={() => void load()}>Retry access settings</button> : <><div className="rounded-xl bg-slate-50 p-4"><div className="flex items-start justify-between gap-3"><div><p className="flex items-center gap-2 text-sm font-bold text-slate-800"><UserRound size={16} className="text-teal-700"/>Your Jibon ID</p><p className="mt-1 text-xs text-slate-500">Share this only with a family owner or admin who wants to invite you.</p></div><button type="button" className="button-secondary shrink-0" onClick={() => void copy(identity.jibon_id, "Jibon ID")}><Copy size={15}/> Copy</button></div><code className="mt-3 block rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold tracking-wide text-slate-900">{identity.jibon_id}</code></div>
     {identity.can_manage_family_code && identity.family_code && <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="flex items-center gap-2 text-sm font-bold text-teal-900"><ShieldCheck size={16}/>Family Code</p><p className="mt-1 text-xs text-teal-800">Anyone with this code can request to join; approval is still required.</p></div><div className="flex gap-2"><button type="button" className="button-secondary" onClick={() => void copy(identity.family_code!, "Family Code")}><Copy size={15}/> Copy</button><button type="button" className="button-secondary" disabled={busy} onClick={() => void rotate()}><RefreshCw size={15}/> Rotate</button></div></div><code className="mt-3 block rounded-lg border border-teal-100 bg-white px-3 py-2 text-sm font-bold tracking-wide text-teal-950">{identity.family_code}</code></div>}
     <form className="rounded-xl border border-slate-200 p-4" onSubmit={requestJoin}><p className="font-bold text-slate-900">Join a family with a code</p><p className="mt-1 text-xs text-slate-500">This sends a request. It never adds you automatically.</p><div className="mt-3 flex flex-col gap-2 sm:flex-row"><input value={familyCode} onChange={(event) => setFamilyCode(event.target.value.toUpperCase())} className="field" placeholder="JBN-F-XXXXXXXXXX" maxLength={16} required disabled={busy}/><button className="button shrink-0" disabled={busy}><Send size={15}/> Request access</button></div></form>
     {canReview && <div><p className="font-bold text-slate-900">Pending join requests</p>{requests.length ? <ul className="mt-3 space-y-2">{requests.map((request) => <li key={request.request_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-3 text-sm"><div><p className="font-semibold text-slate-800">{request.requester_name || "Jibon member"}</p><p className="text-xs text-slate-500">{request.requester_jibon_id}</p></div><div className="flex gap-2"><button type="button" className="button" disabled={busy} onClick={() => void review(request, true)}>Approve</button><button type="button" className="button-secondary" disabled={busy} onClick={() => void review(request, false)}>Decline</button></div></li>)}</ul> : <p className="mt-2 text-sm text-slate-500">No pending requests.</p>}</div>}</>}

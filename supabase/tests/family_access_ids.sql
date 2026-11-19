@@ -33,7 +33,11 @@ begin
   perform set_config('request.jwt.claim.sub', outsider_id::text, true);
   perform set_config('request.jwt.claim.email', outsider_email, true);
   v_request_id := public.request_join_family_by_code(v_family_code);
+  assert v_request_id is not null, 'Family Code must return a saved request ID';
+  -- This internal table intentionally has no browser grants.
+  perform set_config('role', 'postgres', true);
   assert exists(select 1 from public.family_join_requests where id = v_request_id and status = 'pending'), 'Family Code must create a pending request, never membership';
+  perform set_config('role', 'authenticated', true);
   assert not exists(select 1 from public.family_memberships where family_id = v_owner_family_id and user_id = outsider_id), 'Family Code must not grant automatic membership';
 
   perform set_config('request.jwt.claim.sub', owner_id::text, true);

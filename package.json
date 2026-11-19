@@ -7,7 +7,11 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:db": "node tests/database.mjs",
+    "test:unit": "tsx --test tests/*.test.ts",
+    "test:http": "node tests/http.mjs",
+    "test": "npm run test:unit && npm run test:db"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -19,6 +23,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.16",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -26,6 +31,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
     "typescript": "^5"
   }
 }

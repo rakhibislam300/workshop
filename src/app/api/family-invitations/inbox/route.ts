@@ -4,6 +4,9 @@ import { invitationIdInput } from "@/lib/validation";
 import { rejectCrossOrigin } from "@/lib/tree-server";
 
 function acceptError(message: string | undefined) {
+  if (message?.includes("inviter")) return "The inviter's profile or permissions changed. Ask a current family owner or admin for a new invitation.";
+  if (message?.includes("ancestry loop")) return "This relationship conflicts with the existing tree. Ask the inviter to correct the relationship and resend.";
+  if (message?.includes("another account")) return "This invitation belongs to a different Jibon account. Switch accounts to accept it.";
   if (message?.includes("Sign in with the email address")) return "This invitation is for a different email address. Sign in with the invited account, then try again.";
   if (message?.includes("invalid, expired, or already used")) return "This invitation is no longer active. Ask the family owner to send a new one.";
   return "This invitation could not be accepted. Refresh your inbox and try again.";

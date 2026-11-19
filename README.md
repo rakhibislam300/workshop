@@ -5,17 +5,18 @@
 Jibon AI is a mobile-first household dashboard for tasks, bills, appointments, in-app reminders, confirmation-based AI Smart Add, and a contextual family assistant. A signed-in account can own or join family workspaces; local household profiles remain available for assigning responsibilities without requiring separate login accounts.
 
 The complete implementation and verification record lives in [CHANGELOG.md](CHANGELOG.md).
+Repeatable test commands and the remaining live acceptance checklist are in [TESTING.md](TESTING.md).
 
 ## Stack
 
 - Next.js App Router + TypeScript + Tailwind CSS
 - Supabase Auth and PostgreSQL with RLS on every application table
 - Zod validation in the client UI and protected Smart Add route
-- Server-only OpenAI integration (optional)
+- Server-only Gemini integration (optional)
 
 ## Local setup
 
-1. Create a Supabase project and run [`supabase/migrations/20261113130000_jibon_ai.sql`](supabase/migrations/20261113130000_jibon_ai.sql) in the SQL Editor, or apply it with the Supabase CLI.
+1. Apply the unapplied SQL files in `supabase/migrations/` in filename order, using the Supabase SQL Editor or CLI. A new project needs the full chain; an existing project must retain its data and apply only pending migrations. The original core migration alone is insufficient for the current app.
 2. In Supabase Auth settings, set the site URL to your local URL (normally `http://localhost:3000`) and add these redirect URLs:
 
    - `http://localhost:3000/auth/callback`
